@@ -1,62 +1,91 @@
-// Gradient-map colour grades for the cover engine. Each grade is a list of
-// [position, r, g, b] stops; a photo's luminance is mapped through them, so a
-// plain photo comes out as a Vice City sunset, a neon night, and so on.
-// Every grade is original work: no palette was taken from any game.
-export const GRADES = {
-  sunset: {
-    label: 'Vice Sunset',
-    stops: [[0, 26, 11, 46], [0.35, 122, 30, 90], [0.62, 255, 94, 58], [0.82, 255, 179, 71], [1, 255, 243, 196]],
-  },
-  neon: {
-    label: 'Neon Night',
-    stops: [[0, 5, 5, 16], [0.3, 46, 16, 92], [0.58, 255, 46, 136], [0.8, 64, 224, 255], [1, 255, 255, 255]],
-  },
-  gold: {
-    label: 'Gold Hour',
-    stops: [[0, 32, 20, 2], [0.35, 146, 64, 14], [0.62, 245, 158, 11], [0.85, 255, 214, 120], [1, 255, 247, 214]],
-  },
-  teal: {
-    label: 'Teal Pink',
-    stops: [[0, 2, 20, 26], [0.32, 13, 110, 110], [0.6, 236, 72, 153], [0.82, 255, 150, 200], [1, 255, 228, 241]],
-  },
-  noir: {
-    label: 'Mono Noir',
-    stops: [[0, 0, 0, 0], [0.3, 38, 38, 44], [0.65, 150, 150, 158], [1, 255, 255, 255]],
-  },
-};
+// Five truly distinct colour grades for Palm Heat Cover Studio.
+// Each grade drives the comic-ink pipeline: its ink colour, its 5-tone
+// posterize palette (dark -> light), its halftone density and its glow.
+// Pure data + tiny lookups — no DOM, so Node tests can import this file.
 
-export const GRADE_IDS = Object.keys(GRADES);
+export const GRADES = [
+  {
+    id: 'vice',
+    name: 'Vice Sunset',
+    ink: [26, 11, 46],
+    // deep plum -> magenta -> orange-red -> amber -> pale gold
+    palette: [[43, 15, 63], [123, 45, 94], [226, 80, 62], [255, 154, 61], [255, 233, 168]],
+    halftone: 0.5,
+    glow: { color: [255, 140, 40], strength: 0.35 },
+    paper: [24, 10, 18],
+    titleGradient: ['#ffffff', '#ffd76a'],
+    subtitle: '#7df9ff',
+    badge: '#ff2e63',
+  },
+  {
+    id: 'neon',
+    name: 'Neon Night',
+    ink: [5, 5, 16],
+    // midnight -> indigo -> violet -> hot pink -> ice cyan
+    palette: [[10, 10, 36], [27, 42, 107], [123, 47, 247], [255, 46, 136], [125, 249, 255]],
+    halftone: 0.7,
+    glow: { color: [255, 46, 136], strength: 0.55 },
+    paper: [6, 6, 18],
+    titleGradient: ['#ffffff', '#ff9de2'],
+    subtitle: '#7df9ff',
+    badge: '#ff2e88',
+  },
+  {
+    id: 'gold',
+    name: 'Golden Coast',
+    ink: [32, 20, 9],
+    // espresso -> bronze -> ochre -> gold -> cream
+    palette: [[58, 36, 8], [138, 90, 29], [217, 154, 43], [247, 201, 72], [255, 243, 196]],
+    halftone: 0.35,
+    glow: { color: [247, 201, 72], strength: 0.4 },
+    paper: [26, 18, 8],
+    titleGradient: ['#fffbe8', '#f7c948'],
+    subtitle: '#ff8a3d',
+    badge: '#d99a2b',
+  },
+  {
+    id: 'noir',
+    name: 'Noir Ink',
+    ink: [0, 0, 0],
+    // pure greyscale: the ink-and-paper grade
+    palette: [[17, 17, 17], [58, 58, 58], [110, 110, 110], [168, 168, 168], [242, 242, 242]],
+    halftone: 0.85,
+    glow: { color: [255, 255, 255], strength: 0.0 },
+    paper: [12, 12, 12],
+    titleGradient: ['#ffffff', '#d9d9d9'],
+    subtitle: '#e5e5e5',
+    badge: '#111111',
+  },
+  {
+    id: 'teal',
+    name: 'Teal Pink',
+    ink: [13, 27, 42],
+    // deep teal -> teal -> rose -> pink -> blush
+    palette: [[18, 51, 50], [15, 118, 110], [244, 114, 182], [251, 113, 133], [253, 242, 248]],
+    halftone: 0.5,
+    glow: { color: [244, 114, 182], strength: 0.45 },
+    paper: [8, 24, 30],
+    titleGradient: ['#ffffff', '#f9a8d4'],
+    subtitle: '#5eead4',
+    badge: '#f472b6',
+  },
+];
 
-/** Builds a 256-entry lookup table (Uint8ClampedArray, r/g/b triples) for a grade. */
-export function buildGradeLUT(gradeId) {
-  const grade = GRADES[gradeId] ?? GRADES.sunset;
-  const lut = new Uint8ClampedArray(256 * 3);
-  for (let i = 0; i < 256; i++) {
-    const t = i / 255;
-    let a = grade.stops[0];
-    let b = grade.stops[grade.stops.length - 1];
-    for (let s = 0; s < grade.stops.length - 1; s++) {
-      if (t >= grade.stops[s][0] && t <= grade.stops[s + 1][0]) { a = grade.stops[s]; b = grade.stops[s + 1]; break; }
-    }
-    const span = (b[0] - a[0]) || 1;
-    const f = Math.min(1, Math.max(0, (t - a[0]) / span));
-    lut[i * 3] = Math.round(a[1] + (b[1] - a[1]) * f);
-    lut[i * 3 + 1] = Math.round(a[2] + (b[2] - a[2]) * f);
-    lut[i * 3 + 2] = Math.round(a[3] + (b[3] - a[3]) * f);
-  }
-  return lut;
+export function gradeById(id) {
+  return GRADES.find((g) => g.id === id) || GRADES[0];
 }
 
-/** Applies a grade LUT in place to an ImageData's pixels (luminance -> gradient map). */
-export function applyGradeLUT(imageData, lut) {
-  const d = imageData.data;
-  for (let i = 0; i < d.length; i += 4) {
-    let lum = 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
-    lum = Math.min(255, Math.max(0, (lum - 127.5) * 1.18 + 127.5));
-    const idx = (lum | 0) * 3;
-    d[i] = lut[idx];
-    d[i + 1] = lut[idx + 1];
-    d[i + 2] = lut[idx + 2];
+// Map a posterized tone (0..4, dark -> light) to the grade's palette colour.
+export function gradeColor(grade, tone) {
+  const t = Math.max(0, Math.min(4, tone | 0));
+  return grade.palette[t];
+}
+
+// Are two palettes distinct? Used by tests: every grade must read differently.
+export function palettesDistinct(a, b) {
+  let d = 0;
+  for (let i = 0; i < 5; i++) {
+    for (let c = 0; c < 3; c++) d += Math.abs(a.palette[i][c] - b.palette[i][c]);
   }
-  return imageData;
+  return d > 200;
 }

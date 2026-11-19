@@ -1,48 +1,45 @@
-# STRATEGY — Palm Heat Cover Studio (gta6-cover-art-01)
+# Strategy — Palm Heat Cover Studio v2
 
-## What the app is
-An offline, static web app that turns any photo + caption into GTA-style
-multi-panel poster cover art and exports it as a PNG. No build step, no
-network request, no upload: every script, font and sample image is a file
-under `app/`.
+## How it wins
 
-## What wins this bounty (judge criteria, in order)
-1. **The art.** The first screenshot is a finished 1920x1080 landscape
-   cover: a hero panel over three panels, Vice Sunset gradient-map grade,
-   Anton caption in a sunset gradient with an inked outline, Pacifico neon
-   script subtitle, five heat-meter stars and a WANTED badge ribbon. The
-   other screenshots show a nine-panel portrait cover, tilted neon
-   snapshots, and the editor at work.
-2. **Any photo.** File picker for the user's own photos, drag + scroll to
-   crop/position per panel, click any panel to select it, one photo across
-   all panels or a different photo per panel, caption/subtitle/badge/stars
-   all editable. Two model-made sample photos ship with the app.
-3. **Fast and easy.** Layout, grade and size are one click each; Export PNG
-   is one click; sizes are the three common post sizes (1080x1080,
-   1080x1350, 1920x1080).
-4. **Polish.** Live preview, undo/redo (Ctrl+Z / Ctrl+Y), film grain and
-   vignette toggles, inked white panel borders, deterministic `?shot=`
-   scenes so every screenshot is reproducible.
+The judge's first criterion is the art, and the art is decided by the
+screenshots. v1 lost there: a flat orange filter over two repeated photos
+reads as a photo filter, and the judge (and the user) can tell. v2's edge
+is a real comic-ink pipeline — Sobel edges, thick dilated ink outlines,
+5-tone posterize, halftone dots in the shadows, paper grain — so the
+panels look inked and hand-drawn the way Stephen Bliss draws GTA covers,
+not filtered.
 
-## How it is built
-- `app/src/cover.js` — `drawCover`, the one renderer used by both the
-  preview and the export, so what you see is what the PNG holds.
-- `app/src/grades.js` — five gradient-map grades as 256-entry LUTs applied
-  to each panel's pixels (`buildGradeLUT`, `applyGradeLUT`).
-- `app/src/layouts.js` — the five layouts' panel geometry plus the three
-  post sizes (`layoutPanels`, `titleBandHeight`).
-- `app/src/main.js` — state, undo/redo history, per-panel crop/position,
-  photo uploads, export (`exportPNG`).
-- `app/src/shots.js` — deterministic `?shot=` scenes.
-- Fonts: Anton + Pacifico, vendored under `app/fonts/` under the SIL Open
-  Font License (OFL texts beside them). No Rockstar logo, wordmark,
-  artwork, character or font anywhere; every title is invented.
+## The three bets
 
-## Why this beats the house ladder
-The kit's ladder tops out at 7-ace "Neon Coast Cover Studio" (inked/banded
-panels, halftone title block, tilted snapshot layout, story size,
-undo/redo). This entry matches that feature set — five layouts including
-tilted snapshots, five grades, title block with stars + badge, grain +
-vignette, undo/redo, all three post sizes — and adds per-panel photo
-assignment (several photos, not one) and a gradient-filled Anton caption,
-which the ladder's tiers do not combine.
+1. **Ink over filter.** The pipeline runs per photo before the grade, so
+   every grade keeps the same hand-drawn structure. Outlines and halftone
+   are the most visible difference in a side-by-side judge pairing.
+2. **Hero-led hierarchy.** One big hero panel top-left (Bliss's rule),
+   four supporting panels of varied sizes, five different photos in the
+   default preset — a poster that tells a story (boulevard, pier, car,
+   skyline, crowd) instead of one photo repeated.
+3. **Title as logo.** Anton with a white-to-gold gradient, an ~8px black
+   stroke and a hard offset shadow, a Pacifico neon subtitle, a WANTED
+   badge and a 5-star heat meter. The title block is the second thing the
+   judge reads after the panels.
+
+## Measured checks
+
+- Node tests cover the pipeline math (Sobel on a step edge, posterize
+  bands, dilation radius, halftone determinism, palette-only output),
+  the five grades (pairwise distinct palettes) and the five layouts
+  (5 panels, no overlap, hero ≥1.8× median panel area, tilted rotates).
+- `main.ts` is verified to copy app/ + screenshots/ and write a valid
+  dossier.json within the gate caps (screenshots ≤256 KiB, dossier ≤1.5 MiB).
+- Screenshots are the app itself running on localhost:8080 — the cover,
+  the editor with a photo loaded, the portrait cover, and the four-layout
+  overview.
+
+## Tried and dropped
+
+- A single duotone grade over the whole poster (v1): flat, no depth.
+- Reusing 2 sample photos across 5 panels: reads as a template, not a
+  poster. v2 ships 6 distinct samples and never repeats one in a cover.
+- Title without a black stroke: the lettering disappears against bright
+  photos. The ~8px stroke + offset shadow fixes it at every size.

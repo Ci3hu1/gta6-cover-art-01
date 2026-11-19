@@ -3,68 +3,76 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Palm Heat Cover Studio — GTA-style cover art maker</title>
+<title>Palm Heat — GTA 6 Cover Studio</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="./style.css">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<main class="app">
-  <section class="controls" aria-label="Cover controls">
-    <h1>Palm Heat Cover Studio</h1>
-    <p class="tagline">Your photo + a caption = a multi-panel poster cover. Pick a layout, a grade, and export a PNG.</p>
+<div id="app">
+  <header>
+    <h1>PALM HEAT</h1>
+    <p class="tagline">Cover Studio — turn any photo into GTA 6-style cover art, offline in your browser.</p>
+  </header>
 
-    <h2>1 · Layout</h2>
-    <div class="row" id="layouts"></div>
+  <main>
+    <section class="preview-col">
+      <canvas id="preview" width="720" height="720"></canvas>
+      <div class="size-row">
+        <button class="pill active" data-size="1080x1080">Square 1080</button>
+        <button class="pill" data-size="1080x1350">Portrait 1080</button>
+        <button class="pill" data-size="1920x1080">Wide 1920</button>
+        <button id="exportBtn" class="primary">Export PNG</button>
+      </div>
+      <p class="hint">Click a panel to select it. Drag on the preview to move the photo inside the panel.</p>
+    </section>
 
-    <h2>2 · Colour grade</h2>
-    <div class="row" id="grades"></div>
+    <aside class="controls">
+      <label class="field">Title
+        <input id="titleInput" type="text" maxlength="24" value="PALM HEAT">
+      </label>
+      <label class="field">Subtitle
+        <input id="subtitleInput" type="text" maxlength="48" value="a sunset story in Leonida">
+      </label>
 
-    <h2>3 · Post size</h2>
-    <div class="row" id="sizes"></div>
+      <h2>Grade</h2>
+      <div id="gradeRow" class="swatches"></div>
 
-    <h2>4 · Lettering</h2>
-    <label>Caption <input id="caption" type="text" maxlength="24" value="PALM HEAT"></label>
-    <label>Subtitle <input id="subtitle" type="text" maxlength="40" value="a sunset story in Leonida"></label>
-    <label>Badge <input id="badge" type="text" maxlength="12" value="WANTED"></label>
-    <label>Heat meter
-      <select id="stars">
-        <option value="1">★☆☆☆☆</option>
-        <option value="2">★★☆☆☆</option>
-        <option value="3">★★★☆☆</option>
-        <option value="4">★★★★☆</option>
-        <option value="5" selected>★★★★★</option>
-      </select>
-    </label>
+      <h2>Layout</h2>
+      <div id="layoutRow" class="pills"></div>
 
-    <h2>5 · Photos &amp; crop</h2>
-    <p class="hint" id="panelLabel">Panel 1 of 4</p>
-    <div class="row" id="panelList"></div>
-    <div class="row" id="photoPick">
-      <button class="pick" type="button" data-photo="boulevard">Boulevard photo</button>
-      <button class="pick" type="button" data-photo="pier">Pier photo</button>
-    </div>
-    <label class="upload">Upload your own photo <input id="upload" type="file" accept="image/*"></label>
-    <button class="pick" id="fillAll" type="button">Fill all panels with this photo</button>
-    <label>Zoom <span id="zoomLabel">100%</span>
-      <input id="zoom" type="range" min="50" max="300" value="100">
-    </label>
-    <p class="hint">Click a panel, then drag it to position the photo and scroll to zoom. One photo can fill every panel, or each panel can hold its own.</p>
+      <h2>Photos</h2>
+      <div class="photo-actions">
+        <button id="loadSamplesBtn" class="pill">Load 5 samples</button>
+        <label class="pill upload">Upload photos
+          <input id="uploadInput" type="file" accept="image/*" multiple hidden>
+        </label>
+      </div>
+      <div id="photoRow" class="thumbs"></div>
 
-    <h2>6 · Finish</h2>
-    <label class="check"><input id="grain" type="checkbox" checked> Film grain</label>
-    <label class="check"><input id="vignette" type="checkbox" checked> Vignette</label>
-    <div class="row">
-      <button id="undo" type="button">Undo</button>
-      <button id="redo" type="button">Redo</button>
-    </div>
-    <button id="export" type="button">Export PNG</button>
-    <p id="status" role="status"></p>
-    <p class="fine">Photos never leave your machine. All art, lettering and fonts are original; Anton and Pacifico are licensed under the SIL Open Font License.</p>
-  </section>
-  <section class="preview" aria-label="Cover preview">
-    <canvas id="cover" width="640" height="640" aria-label="The cover preview"></canvas>
-  </section>
-</main>
-<script type="module" src="./src/main.js"></script>
+      <h2>Selected panel</h2>
+      <p id="panelLabel">Panel 1 of 5</p>
+      <label class="field">Zoom
+        <input id="zoomRange" type="range" min="1" max="2.5" step="0.05" value="1">
+      </label>
+
+      <div class="toggles">
+        <label><input id="grainToggle" type="checkbox" checked> Paper grain</label>
+        <label><input id="vignetteToggle" type="checkbox" checked> Vignette</label>
+      </div>
+
+      <div class="history-row">
+        <button id="undoBtn" class="pill">Undo</button>
+        <button id="redoBtn" class="pill">Redo</button>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <p>100% offline — photos never leave your machine. Title font Anton &amp; script Pacifico, both under the SIL Open Font License (see app/fonts/OFL.txt). Original art, no Rockstar Games logo, artwork or fonts.</p>
+  </footer>
+</div>
+
+<script type="module" src="src/main.js"></script>
+<script type="module" src="src/shots.js"></script>
 </body>
 </html>

@@ -1,80 +1,73 @@
-// Panel geometry for the five cover layouts. Every layout returns panels as
-// {x, y, w, h, rot} in cover pixels, plus a titleBand height fraction.
-// The layouts are the app's own poster designs: a four-panel grid, a hero with
-// three below, a single full-bleed photo, a nine-panel grid, and tilted snapshots.
-export const LAYOUTS = {
-  grid4: { label: 'Four-Panel Grid', panels: 4 },
-  hero3: { label: 'Hero + Three', panels: 4 },
-  fullbleed: { label: 'Full Bleed', panels: 1 },
-  grid9: { label: 'Nine-Panel Grid', panels: 9 },
-  tilted: { label: 'Tilted Snapshots', panels: 3 },
-};
+// Panel layout math for Palm Heat Cover Studio.
+// Every layout returns 5 panel rects in fractional coordinates of the
+// content area (0..1), plus an optional rotation per panel (degrees).
+// The hero panel is always the big one, top-left, at least ~2x the area
+// of a supporting panel — the Stephen Bliss comic-grid rule.
+// Pure math — no DOM, so Node tests can import this file.
 
-export const LAYOUT_IDS = Object.keys(LAYOUTS);
+export const LAYOUTS = [
+  { id: 'hero', name: 'Hero-led', desc: 'Big hero top-left, four supporting panels' },
+  { id: 'classic', name: 'Classic Grid', desc: 'Three across the top, two wide below' },
+  { id: 'portrait', name: 'Portrait', desc: 'Full-width hero, 2x2 grid beneath' },
+  { id: 'wide', name: 'Wide', desc: 'Tall hero on the left, 2x2 grid on the right' },
+  { id: 'tilted', name: 'Tilted Snapshots', desc: 'Hero grid, panels tilted like snapshots' },
+];
 
-export const SIZES = {
-  '1080x1080': { label: 'Square 1080 x 1080', w: 1080, h: 1080 },
-  '1080x1350': { label: 'Portrait 1080 x 1350', w: 1080, h: 1350 },
-  '1920x1080': { label: 'Landscape 1920 x 1080', w: 1920, h: 1080 },
-};
-
-export const SIZE_IDS = Object.keys(SIZES);
-
-/** Panel rectangles for a layout inside a W x H cover. `gap` is the inked gutter. */
-export function layoutPanels(layout, W, H) {
-  const gap = Math.max(4, Math.round(Math.min(W, H) * 0.012));
-  const band = Math.round(H * 0.24); // title band reserved at the foot
-  const top = 0;
-  const bottom = H - band;
-  const innerH = bottom - top;
-  const P = (x, y, w, h, rot = 0) => ({ x, y, w, h, rot });
-  switch (layout) {
-    case 'grid4': {
-      const cw = (W - gap * 3) / 2;
-      const ch = (innerH - gap * 3) / 2;
+// Fractional rects: { x, y, w, h } in 0..1 of the content area, rot in degrees.
+export function layoutRects(layoutId, count = 5) {
+  const r = (x, y, w, h, rot = 0) => ({ x, y, w, h, rot });
+  switch (layoutId) {
+    case 'classic':
       return [
-        P(gap, gap, cw, ch), P(gap * 2 + cw, gap, cw, ch),
-        P(gap, gap * 2 + ch, cw, ch), P(gap * 2 + cw, gap * 2 + ch, cw, ch),
-      ];
-    }
-    case 'hero3': {
-      const heroH = Math.round(innerH * 0.6);
-      const rowH = innerH - heroH - gap * 2;
-      const cw = (W - gap * 4) / 3;
+        r(0, 0, 0.323, 0.49), r(0.3385, 0, 0.323, 0.49), r(0.677, 0, 0.323, 0.49),
+        r(0, 0.51, 0.49, 0.49), r(0.51, 0.51, 0.49, 0.49),
+      ].slice(0, count);
+    case 'portrait':
       return [
-        P(gap, gap, W - gap * 2, heroH),
-        P(gap, heroH + gap * 2, cw, rowH),
-        P(gap * 2 + cw, heroH + gap * 2, cw, rowH),
-        P(gap * 3 + cw * 2, heroH + gap * 2, cw, rowH),
-      ];
-    }
-    case 'fullbleed':
-      return [P(0, 0, W, H)];
-    case 'grid9': {
-      const cw = (W - gap * 4) / 3;
-      const ch = (innerH - gap * 4) / 3;
-      const out = [];
-      for (let r = 0; r < 3; r++) {
-        for (let c = 0; c < 3; c++) out.push(P(gap + c * (cw + gap), gap + r * (ch + gap), cw, ch));
-      }
-      return out;
-    }
-    case 'tilted': {
-      const pw = Math.round(W * 0.34);
-      const ph = Math.round(innerH * 0.82);
-      const y = Math.round((innerH - ph) / 2);
+        r(0, 0, 1, 0.42),
+        r(0, 0.44, 0.49, 0.27), r(0.51, 0.44, 0.49, 0.27),
+        r(0, 0.73, 0.49, 0.27), r(0.51, 0.73, 0.49, 0.27),
+      ].slice(0, count);
+    case 'wide':
       return [
-        P(Math.round(W * 0.06), y, pw, ph, -0.09),
-        P(Math.round(W * 0.33), y - 8, pw, ph, 0.03),
-        P(Math.round(W * 0.60), y, pw, ph, 0.10),
-      ];
-    }
+        r(0, 0, 0.46, 1),
+        r(0.48, 0, 0.25, 0.49), r(0.75, 0, 0.25, 0.49),
+        r(0.48, 0.51, 0.25, 0.49), r(0.75, 0.51, 0.25, 0.49),
+      ].slice(0, count);
+    case 'tilted':
+      return [
+        r(0, 0, 0.585, 0.66, -2), r(0.6, 0, 0.4, 0.32, 1.5),
+        r(0.6, 0.34, 0.4, 0.32, -1), r(0, 0.68, 0.49, 0.32, 2),
+        r(0.51, 0.68, 0.49, 0.32, -1.5),
+      ].slice(0, count);
+    case 'hero':
     default:
-      return layoutPanels('grid4', W, H);
+      return [
+        r(0, 0, 0.585, 0.66),
+        r(0.6, 0, 0.4, 0.32), r(0.6, 0.34, 0.4, 0.32),
+        r(0, 0.68, 0.49, 0.32), r(0.51, 0.68, 0.49, 0.32),
+      ].slice(0, count);
   }
 }
 
-/** Height of the title band at the foot of the cover, in pixels. */
-export function titleBandHeight(H) {
-  return Math.round(H * 0.24);
+export function layoutById(id) {
+  return LAYOUTS.find((l) => l.id === id) || LAYOUTS[0];
+}
+
+// Scale fractional rects to pixel rects inside a content box.
+export function scaleRects(rects, contentW, contentH) {
+  return rects.map((p) => ({
+    x: Math.round(p.x * contentW),
+    y: Math.round(p.y * contentH),
+    w: Math.max(1, Math.round(p.w * contentW)),
+    h: Math.max(1, Math.round(p.h * contentH)),
+    rot: p.rot || 0,
+  }));
+}
+
+// Rect overlap area (0 when disjoint) — used by tests.
+export function overlapArea(a, b) {
+  const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
+  const y = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+  return x * y;
 }
