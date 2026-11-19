@@ -1,45 +1,45 @@
-# Strategy — Palm Heat Cover Studio v2
+# STRATEGY — Palm Heat Cover Studio v2.1
 
-## How it wins
+## The edge
+The judge compares screenshots pairwise, and the cover screenshot goes on
+top of the contact sheet at the largest size. So the whole entry is built
+backwards from that one image: it must read as GTA cover art at a glance.
+Three things do that, in order:
 
-The judge's first criterion is the art, and the art is decided by the
-screenshots. v1 lost there: a flat orange filter over two repeated photos
-reads as a photo filter, and the judge (and the user) can tell. v2's edge
-is a real comic-ink pipeline — Sobel edges, thick dilated ink outlines,
-5-tone posterize, halftone dots in the shadows, paper grain — so the
-panels look inked and hand-drawn the way Stephen Bliss draws GTA covers,
-not filtered.
+1. **Real ink, not a filter.** The pipeline detects edges from the photo
+   itself and redraws them as thick black outlines, flattens the photo to
+   five tones, and screens halftone dots into the shadows. That is the
+   Stephen Bliss look — pulp + comic + high fashion — and it is what
+   separates this entry from every flat duotone filter in the field. The
+   five grades restyle the same ink, so one photo gives five different
+   posters.
+2. **A face that survives the crop.** The hero panel is tall, the crop is
+   anchored on a measured focus point, and a safe box (head + shoulders)
+   is guaranteed visible — letterboxed before it is ever cut. A cover
+   whose lead has no face loses to one whose lead does, whatever the
+   filter.
+3. **A story in the details.** "OCEAN DR" and "LEONIDA" hidden in the
+   panels, a WANTED badge, a five-star heat meter, a neon-script subtitle
+   under a hard-outlined title. The poster tells you where you are and
+   what happened there.
 
-## The three bets
+## What was tried and dropped
+- **Flat duotone grade (v1).** A single orange overlay over the photo.
+  Looked like a filter, not art. Dropped for the ink pipeline.
+- **Repeated photos across panels (v1).** Two photos reused in four
+  panels. Looked cheap at a glance. Now six distinct samples, five
+  different ones in every default cover.
+- **Wide short hero panel (v2).** Cropped the lead's face. Dropped: the
+  hero is tall in every layout, and the safe-box rule is enforced in code
+  and tests.
+- **Empty-sky panel as a full panel (v2).** The foggy sunset read as
+  blank gradient. Now its cloud band is the focus, and wide empty photos
+  go in the Sunset Strip layout where emptiness is the point.
 
-1. **Ink over filter.** The pipeline runs per photo before the grade, so
-   every grade keeps the same hand-drawn structure. Outlines and halftone
-   are the most visible difference in a side-by-side judge pairing.
-2. **Hero-led hierarchy.** One big hero panel top-left (Bliss's rule),
-   four supporting panels of varied sizes, five different photos in the
-   default preset — a poster that tells a story (boulevard, pier, car,
-   skyline, crowd) instead of one photo repeated.
-3. **Title as logo.** Anton with a white-to-gold gradient, an ~8px black
-   stroke and a hard offset shadow, a Pacifico neon subtitle, a WANTED
-   badge and a 5-star heat meter. The title block is the second thing the
-   judge reads after the panels.
-
-## Measured checks
-
-- Node tests cover the pipeline math (Sobel on a step edge, posterize
-  bands, dilation radius, halftone determinism, palette-only output),
-  the five grades (pairwise distinct palettes) and the five layouts
-  (5 panels, no overlap, hero ≥1.8× median panel area, tilted rotates).
-- `main.ts` is verified to copy app/ + screenshots/ and write a valid
-  dossier.json within the gate caps (screenshots ≤256 KiB, dossier ≤1.5 MiB).
-- Screenshots are the app itself running on localhost:8080 — the cover,
-  the editor with a photo loaded, the portrait cover, and the four-layout
-  overview.
-
-## Tried and dropped
-
-- A single duotone grade over the whole poster (v1): flat, no depth.
-- Reusing 2 sample photos across 5 panels: reads as a template, not a
-  poster. v2 ships 6 distinct samples and never repeats one in a cover.
-- Title without a black stroke: the lettering disappears against bright
-  photos. The ~8px stroke + offset shadow fixes it at every size.
+## Expected outcome
+The entry contends beside the 7-ace rung (inked/banded panels, halftone
+title block, tilted snapshots, story size, undo/redo) with a cover whose
+lead face is always visible. Live score is the judge — the local tests
+only prove the framing rules hold; the resubmission loop (up to 5 per
+competition, ~20 minutes apart, only on a real improvement) decides the
+next version.

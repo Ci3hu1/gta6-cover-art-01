@@ -1,152 +1,114 @@
-// Fixed scenes for screenshots: ?shot=cover shows the exported cover
-// alone, ?shot=editor shows the editor with photos loaded, ?shot=portrait
-// the portrait cover, ?shot=layouts an overview of all four layouts.
-// window.__shotReady is set once painted (Playwright waits for it).
+// Fixed scenes for screenshots: ?shot=cover shows the exported cover alone,
+// ?shot=editor the app with a photo loaded, ?shot=portrait a portrait cover,
+// ?shot=layouts five cells side by side: hero, grid, portrait, strip, plus
+// the same hero in Neon Night to show the grades differ. `photos` picks
+// the samples (comma list from samples/<id>.jpg) and `caption` the words.
+// window.__shotReady is set once the scene is painted and the fonts are in.
+import { renderCover, loadImage, sampleById, DEFAULT_COVER_PHOTOS } from './cover.js';
 
-import { renderCover } from './cover.js';
-import { gradeById } from './grades.js';
-
-const FIVE_PHOTOS = [
-  { photo: 'boulevard', zoom: 1, ox: 0.5, oy: 0.45 },
-  { photo: 'pier', zoom: 1, ox: 0.5, oy: 0.45 },
-  { photo: 'car', zoom: 1, ox: 0.5, oy: 0.45 },
-  { photo: 'skyline', zoom: 1, ox: 0.5, oy: 0.7 },
-  { photo: 'neon', zoom: 1, ox: 0.5, oy: 0.5 },
-];
-
-function waitForApp() {
-  return new Promise((resolve) => {
-    const tick = () => {
-      if (window.__coverApp) resolve(window.__coverApp);
-      else setTimeout(tick, 50);
-    };
-    tick();
-  });
+async function loadPhotos(ids) {
+  const out = [];
+  for (const id of ids) {
+    const sample = sampleById(id.trim());
+    out.push({ img: await loadImage(sample.file), sample });
+  }
+  return out;
 }
 
-async function waitFonts() {
+function fivePhotos(photos) {
+  const full = [...photos];
+  let i = 0;
+  while (full.length < 5) {
+    const sample = sampleById(DEFAULT_COVER_PHOTOS[i % DEFAULT_COVER_PHOTOS.length]);
+    full.push({ img: full[i % Math.max(1, photos.length)].img, sample });
+    i++;
+  }
+  return full.slice(0, 5);
+}
+
+async function ready() {
   try {
     await Promise.all([
-      document.fonts.load('80px Anton'),
-      document.fonts.load('40px Pacifico'),
+      document.fonts.load('16px Anton'),
+      document.fonts.load('16px Pacifico'),
+      document.fonts.ready,
     ]);
-  } catch { /* fall back to system fonts */ }
-}
-
-function shotCanvas(w, h) {
-  document.body.classList.add('shot-cover');
-  let canvas = document.getElementById('shotCanvas');
-  if (!canvas) {
-    canvas = document.createElement('canvas');
-    canvas.id = 'shotCanvas';
-    document.body.appendChild(canvas);
-  }
-  canvas.width = w;
-  canvas.height = h;
-  return canvas;
-}
-
-async function renderStandalone(app, { layout, gradeId, title, subtitle, photos, w, h }) {
-  const grade = gradeById(gradeId);
-  const panels = [];
-  for (const p of photos) {
-    const img = await app.ensureImage(p.photo);
-    const { processPhoto } = await import('./cover.js');
-    const inked = processPhoto(img, grade, { inkWidth: 2, seed: 7 });
-    panels.push({ photo: p.photo, zoom: p.zoom ?? 1, ox: p.ox ?? 0.5, oy: p.oy ?? 0.5, inked });
-  }
-  const canvas = shotCanvas(w, h);
-  const ctx = canvas.getContext('2d');
-  renderCover(ctx, w, h, { layout, grade, title, subtitle, grain: true, vignette: true, panels });
-}
-
-async function renderLayouts(app) {
-  const W = 1280;
-  const H = 720;
-  const canvas = shotCanvas(W, H);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#0d0d12';
-  ctx.fillRect(0, 0, W, H);
-  const layouts = [
-    ['classic', 'Classic Grid'],
-    ['hero', 'Hero-led'],
-    ['portrait', 'Portrait'],
-    ['wide', 'Wide'],
-  ];
-  const cellW = 600;
-  const cellH = 300;
-  const gapX = 24;
-  const gapY = 44;
-  const x0 = (W - (cellW * 2 + gapX)) / 2;
-  const y0 = 28;
-  const grade = gradeById('neon');
-  for (let i = 0; i < layouts.length; i++) {
-    const [layoutId, label] = layouts[i];
-    const cx = x0 + (i % 2) * (cellW + gapX);
-    const cy = y0 + Math.floor(i / 2) * (cellH + gapY);
-    const panels = [];
-    for (const p of FIVE_PHOTOS) {
-      const img = await app.ensureImage(p.photo);
-      const { processPhoto } = await import('./cover.js');
-      panels.push({ photo: p.photo, zoom: p.zoom ?? 1, ox: p.ox ?? 0.5, oy: p.oy ?? 0.5, inked: processPhoto(img, grade, { inkWidth: 2, seed: 7 }) });
-    }
-    const mini = document.createElement('canvas');
-    mini.width = cellW;
-    mini.height = cellH;
-    renderCover(mini.getContext('2d'), cellW, cellH, {
-      layout: layoutId, grade, title: 'NEON DRIVE',
-      subtitle: 'a night drive in Leonida', grain: true, vignette: true, panels,
-    });
-    ctx.fillStyle = '#f5f0dc';
-    ctx.font = 'bold 20px Anton, Arial, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
-    ctx.fillText(label, cx, cy - 10);
-    ctx.drawImage(mini, cx, cy, cellW, cellH);
-    ctx.strokeStyle = '#333333';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(cx, cy, cellW, cellH);
-  }
-}
-
-export async function runShot() {
-  const query = new URLSearchParams(location.search);
-  const shot = query.get('shot') || 'editor';
-  const caption = query.get('caption') || 'PALM HEAT';
-  const app = await waitForApp();
-  await waitFonts();
-
-  if (shot === 'cover') {
-    await app.setState({
-      layout: 'hero', grade: 'vice', title: caption,
-      subtitle: 'a sunset story in Leonida',
-      panels: FIVE_PHOTOS.map((p) => ({ ...p })),
-    });
-    await renderStandalone(app, {
-      layout: 'hero', gradeId: 'vice', title: caption,
-      subtitle: 'a sunset story in Leonida', photos: FIVE_PHOTOS,
-      w: window.innerWidth, h: window.innerHeight,
-    });
-  } else if (shot === 'portrait') {
-    await renderStandalone(app, {
-      layout: 'portrait', gradeId: 'vice', title: caption,
-      subtitle: 'a sunset story in Leonida', photos: FIVE_PHOTOS,
-      w: window.innerWidth, h: window.innerHeight,
-    });
-  } else if (shot === 'layouts') {
-    await renderLayouts(app);
-  } else {
-    // Editor: default preset, photos loaded, UI visible.
-    await app.setState({
-      layout: 'hero', grade: 'vice', title: caption,
-      subtitle: 'a sunset story in Leonida',
-      panels: FIVE_PHOTOS.map((p) => ({ ...p })),
-    });
+  } catch {
+    await document.fonts.ready;
   }
   await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
   window.__shotReady = true;
 }
 
-if (new URLSearchParams(location.search).has('shot')) {
-  runShot();
+export async function runShot(shot, query, api) {
+  const canvas = document.getElementById('cover');
+  const caption = query.get('caption') ?? 'PALM HEAT';
+  const ids = (query.get('photos') ?? query.get('photo') ?? 'boulevard').split(',');
+  const subtitle = query.get('subtitle') ?? 'a sunset story in Leonida';
+
+  if (shot === 'cover') {
+    document.body.classList.add('shot-cover');
+    canvas.width = 1280;
+    canvas.height = 720;
+    const photos = fivePhotos(await loadPhotos(ids));
+    renderCover(canvas, { photos, caption, subtitle, layoutId: 'hero', gradeId: 'vice' });
+    await ready();
+    return;
+  }
+
+  if (shot === 'portrait') {
+    document.body.classList.add('shot-cover');
+    canvas.width = 1024;
+    canvas.height = 1280;
+    const photos = fivePhotos(await loadPhotos(ids));
+    renderCover(canvas, { photos, caption, subtitle, layoutId: 'portrait', gradeId: 'vice' });
+    await ready();
+    return;
+  }
+
+  if (shot === 'layouts') {
+    document.body.classList.add('shot-cover');
+    canvas.width = 1280;
+    canvas.height = 720;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#14081F';
+    ctx.fillRect(0, 0, 1280, 720);
+    const photos = fivePhotos(await loadPhotos(ids));
+    // Each mini is rendered at its own layout's natural aspect: the portrait
+    // mini is tall, the rest landscape. Rendering a portrait layout into a
+    // landscape cell breaks its composition, so it gets a tall cell.
+    const cells = [
+      { x: 8, y: 8, w: 628, h: 346, layoutId: 'hero', label: 'HERO-LED' },
+      { x: 644, y: 8, w: 628, h: 346, layoutId: 'grid', label: 'CLASSIC GRID' },
+      { x: 8, y: 366, w: 260, h: 346, layoutId: 'portrait', label: 'PORTRAIT' },
+      { x: 276, y: 366, w: 620, h: 346, layoutId: 'strip', label: 'SUNSET STRIP' },
+      // A second grade in hero layout, not the tilted layout: the tilted
+      // snapshots read as a cream block at this size (the neon photo's bright
+      // sky posterizes to the lightest tone), while a Neon Night mini proves
+      // the grades are genuinely different.
+      { x: 904, y: 366, w: 368, h: 346, layoutId: 'hero', gradeId: 'neon', label: 'NEON NIGHT' },
+    ];
+    for (const cell of cells) {
+      const mini = document.createElement('canvas');
+      mini.width = cell.w;
+      mini.height = cell.h;
+      renderCover(mini, { photos, caption, subtitle, layoutId: cell.layoutId, gradeId: cell.gradeId || 'vice' });
+      ctx.drawImage(mini, cell.x, cell.y);
+      ctx.fillStyle = 'rgba(20,8,31,0.85)';
+      ctx.fillRect(cell.x, cell.y, 150, 26);
+      ctx.fillStyle = '#FFD76B';
+      ctx.font = 'bold 15px Anton, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(cell.label, cell.x + 10, cell.y + 14);
+    }
+    await ready();
+    return;
+  }
+
+  // editor: hand the first photo to the editor and let it render itself.
+  const first = sampleById(ids[0].trim());
+  const img = await loadImage(first.file);
+  api.editorLoad(first, img, caption);
+  await ready();
 }

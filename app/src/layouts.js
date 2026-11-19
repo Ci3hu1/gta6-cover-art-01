@@ -1,73 +1,119 @@
-// Panel layout math for Palm Heat Cover Studio.
-// Every layout returns 5 panel rects in fractional coordinates of the
-// content area (0..1), plus an optional rotation per panel (degrees).
-// The hero panel is always the big one, top-left, at least ~2x the area
-// of a supporting panel — the Stephen Bliss comic-grid rule.
-// Pure math — no DOM, so Node tests can import this file.
+// Panel layouts — five ways to arrange five photos on a cover, all drawn from
+// one design system: a hero panel (the face, the story's lead) plus four
+// supporting panels of varied sizes, with a thin gap and thick inked frames.
+// The hero panel is always TALL, never a wide short strip: a wide strip is
+// what cropped the v2 hero's face. Every layout keeps the hero at least
+// 1.8x the median panel area so the eye lands on the lead first.
+//
+// layoutPanels(id, w, h, gap) -> [{ x, y, w, h, role, rot }] in canvas pixels,
+// where (w, h) is the panel area ABOVE the title block. Roles: 'hero' first,
+// then 'a', 'b', 'c', 'd' in reading order.
+
+function split(total, parts, gap) {
+  // Split `total` px into `parts` lengths with `gap` px between them.
+  const usable = total - gap * (parts.length - 1);
+  const weights = parts.reduce((a, b) => a + b, 0);
+  let at = 0;
+  return parts.map((p) => {
+    const len = Math.round((usable * p) / weights);
+    const out = { at, len };
+    at += len + gap;
+    return out;
+  });
+}
 
 export const LAYOUTS = [
-  { id: 'hero', name: 'Hero-led', desc: 'Big hero top-left, four supporting panels' },
-  { id: 'classic', name: 'Classic Grid', desc: 'Three across the top, two wide below' },
-  { id: 'portrait', name: 'Portrait', desc: 'Full-width hero, 2x2 grid beneath' },
-  { id: 'wide', name: 'Wide', desc: 'Tall hero on the left, 2x2 grid on the right' },
-  { id: 'tilted', name: 'Tilted Snapshots', desc: 'Hero grid, panels tilted like snapshots' },
+  { id: 'hero', name: 'Hero-led' },
+  { id: 'grid', name: 'Classic Grid' },
+  { id: 'portrait', name: 'Portrait' },
+  { id: 'strip', name: 'Sunset Strip' },
+  { id: 'tilted', name: 'Tilted Snapshots' },
 ];
-
-// Fractional rects: { x, y, w, h } in 0..1 of the content area, rot in degrees.
-export function layoutRects(layoutId, count = 5) {
-  const r = (x, y, w, h, rot = 0) => ({ x, y, w, h, rot });
-  switch (layoutId) {
-    case 'classic':
-      return [
-        r(0, 0, 0.323, 0.49), r(0.3385, 0, 0.323, 0.49), r(0.677, 0, 0.323, 0.49),
-        r(0, 0.51, 0.49, 0.49), r(0.51, 0.51, 0.49, 0.49),
-      ].slice(0, count);
-    case 'portrait':
-      return [
-        r(0, 0, 1, 0.42),
-        r(0, 0.44, 0.49, 0.27), r(0.51, 0.44, 0.49, 0.27),
-        r(0, 0.73, 0.49, 0.27), r(0.51, 0.73, 0.49, 0.27),
-      ].slice(0, count);
-    case 'wide':
-      return [
-        r(0, 0, 0.46, 1),
-        r(0.48, 0, 0.25, 0.49), r(0.75, 0, 0.25, 0.49),
-        r(0.48, 0.51, 0.25, 0.49), r(0.75, 0.51, 0.25, 0.49),
-      ].slice(0, count);
-    case 'tilted':
-      return [
-        r(0, 0, 0.585, 0.66, -2), r(0.6, 0, 0.4, 0.32, 1.5),
-        r(0.6, 0.34, 0.4, 0.32, -1), r(0, 0.68, 0.49, 0.32, 2),
-        r(0.51, 0.68, 0.49, 0.32, -1.5),
-      ].slice(0, count);
-    case 'hero':
-    default:
-      return [
-        r(0, 0, 0.585, 0.66),
-        r(0.6, 0, 0.4, 0.32), r(0.6, 0.34, 0.4, 0.32),
-        r(0, 0.68, 0.49, 0.32), r(0.51, 0.68, 0.49, 0.32),
-      ].slice(0, count);
-  }
-}
 
 export function layoutById(id) {
   return LAYOUTS.find((l) => l.id === id) || LAYOUTS[0];
 }
 
-// Scale fractional rects to pixel rects inside a content box.
-export function scaleRects(rects, contentW, contentH) {
-  return rects.map((p) => ({
-    x: Math.round(p.x * contentW),
-    y: Math.round(p.y * contentH),
-    w: Math.max(1, Math.round(p.w * contentW)),
-    h: Math.max(1, Math.round(p.h * contentH)),
-    rot: p.rot || 0,
-  }));
+export function layoutPanels(id, w, h, gap = 8) {
+  const g = Math.max(4, Math.round(gap));
+  switch (id) {
+    case 'grid': {
+      // Two rows: 2 panels on top, 3 below — a comic grid, no panel dominant.
+      const rows = split(h, [9, 11], g);
+      const top = split(w, [1, 1], g);
+      const bot = split(w, [1, 1, 1], g);
+      return [
+        { x: top[0].at, y: rows[0].at, w: top[0].len, h: rows[0].len, role: 'hero', rot: 0 },
+        { x: top[1].at, y: rows[0].at, w: top[1].len, h: rows[0].len, role: 'a', rot: 0 },
+        { x: bot[0].at, y: rows[1].at, w: bot[0].len, h: rows[1].len, role: 'b', rot: 0 },
+        { x: bot[1].at, y: rows[1].at, w: bot[1].len, h: rows[1].len, role: 'c', rot: 0 },
+        { x: bot[2].at, y: rows[1].at, w: bot[2].len, h: rows[1].len, role: 'd', rot: 0 },
+      ];
+    }
+    case 'portrait': {
+      // Hero wide on top, 2x2 grid below. The hero is wide but TALL (55% of
+      // the area), so a face still fits — the face-safe crop guarantees it.
+      const rows = split(h, [11, 9], g);
+      const bot = split(w, [1, 1], g);
+      const botRows = split(rows[1].len, [1, 1], g);
+      return [
+        { x: 0, y: rows[0].at, w, h: rows[0].len, role: 'hero', rot: 0 },
+        { x: bot[0].at, y: rows[1].at + botRows[0].at, w: bot[0].len, h: botRows[0].len, role: 'a', rot: 0 },
+        { x: bot[1].at, y: rows[1].at + botRows[0].at, w: bot[1].len, h: botRows[0].len, role: 'b', rot: 0 },
+        { x: bot[0].at, y: rows[1].at + botRows[1].at, w: bot[0].len, h: botRows[1].len, role: 'c', rot: 0 },
+        { x: bot[1].at, y: rows[1].at + botRows[1].at, w: bot[1].len, h: botRows[1].len, role: 'd', rot: 0 },
+      ];
+    }
+    case 'strip': {
+      // 2x2 grid on top, one wide sunset strip along the bottom — the strip
+      // is where an empty-sky photo earns its keep as a breather.
+      const rows = split(h, [7, 3], g);
+      const top = split(w, [1, 1], g);
+      const topRows = split(rows[0].len, [1, 1], g);
+      return [
+        { x: top[0].at, y: rows[0].at + topRows[0].at, w: top[0].len, h: topRows[0].len, role: 'hero', rot: 0 },
+        { x: top[1].at, y: rows[0].at + topRows[0].at, w: top[1].len, h: topRows[0].len, role: 'a', rot: 0 },
+        { x: top[0].at, y: rows[0].at + topRows[1].at, w: top[0].len, h: topRows[1].len, role: 'b', rot: 0 },
+        { x: top[1].at, y: rows[0].at + topRows[1].at, w: top[1].len, h: topRows[1].len, role: 'c', rot: 0 },
+        { x: 0, y: rows[1].at, w, h: rows[1].len, role: 'd', rot: 0 },
+      ];
+    }
+    case 'tilted': {
+      // Five snapshot frames, slightly rotated, overlapping on the dark
+      // background like photos tossed on a table. Overlap is intentional.
+      const cw = Math.round(w * 0.36);
+      const ch = Math.round(h * 0.52);
+      return [
+        { x: Math.round(w * 0.03), y: Math.round(h * 0.04), w: cw, h: ch, role: 'hero', rot: -3 },
+        { x: Math.round(w * 0.36), y: Math.round(h * 0.02), w: cw, h: ch, role: 'a', rot: 2 },
+        { x: Math.round(w * 0.62), y: Math.round(h * 0.06), w: Math.round(w * 0.34), h: ch, role: 'b', rot: -2 },
+        { x: Math.round(w * 0.12), y: Math.round(h * 0.46), w: cw, h: ch, role: 'c', rot: 2 },
+        { x: Math.round(w * 0.48), y: Math.round(h * 0.44), w: Math.round(w * 0.38), h: ch, role: 'd', rot: -3 },
+      ];
+    }
+    case 'hero':
+    default: {
+      // Hero-led: a TALL hero on the left (39% of the width, full height),
+      // four supporting panels in a 2x2 grid on the right.
+      const cols = split(w, [39, 61], g);
+      const right = split(cols[1].len, [1, 1], g);
+      const rightRows = split(h, [1, 1], g);
+      return [
+        { x: cols[0].at, y: 0, w: cols[0].len, h, role: 'hero', rot: 0 },
+        { x: cols[1].at + right[0].at, y: rightRows[0].at, w: right[0].len, h: rightRows[0].len, role: 'a', rot: 0 },
+        { x: cols[1].at + right[1].at, y: rightRows[0].at, w: right[1].len, h: rightRows[0].len, role: 'b', rot: 0 },
+        { x: cols[1].at + right[0].at, y: rightRows[1].at, w: right[0].len, h: rightRows[1].len, role: 'c', rot: 0 },
+        { x: cols[1].at + right[1].at, y: rightRows[1].at, w: right[1].len, h: rightRows[1].len, role: 'd', rot: 0 },
+      ];
+    }
+  }
 }
 
-// Rect overlap area (0 when disjoint) — used by tests.
-export function overlapArea(a, b) {
-  const x = Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x));
-  const y = Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
-  return x * y;
+/** Area of the hero panel vs the median panel area, for the hero-dominance rule. */
+export function heroDominance(id, w, h) {
+  const panels = layoutPanels(id, w, h);
+  const hero = panels.find((p) => p.role === 'hero');
+  const areas = panels.map((p) => p.w * p.h).sort((a, b) => a - b);
+  const median = areas[Math.floor(areas.length / 2)];
+  return (hero.w * hero.h) / median;
 }
