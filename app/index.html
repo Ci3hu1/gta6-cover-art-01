@@ -3,20 +3,67 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cover Snap</title>
+<title>Palm Heat Cover Studio — GTA-style cover art maker</title>
+<link rel="icon" href="data:,">
 <link rel="stylesheet" href="./style.css">
 </head>
 <body>
 <main class="app">
-  <section class="controls">
-    <h1>Cover Snap</h1>
-    <p>A photo and a caption, made into a square cover.</p>
-    <label>Photo <input id="photo" type="file" accept="image/*"></label>
-    <label>Caption <input id="caption" type="text" maxlength="40" value="Sunset Heist"></label>
-    <button id="export" type="button">Export PNG 1080 x 1080</button>
+  <section class="controls" aria-label="Cover controls">
+    <h1>Palm Heat Cover Studio</h1>
+    <p class="tagline">Your photo + a caption = a multi-panel poster cover. Pick a layout, a grade, and export a PNG.</p>
+
+    <h2>1 · Layout</h2>
+    <div class="row" id="layouts"></div>
+
+    <h2>2 · Colour grade</h2>
+    <div class="row" id="grades"></div>
+
+    <h2>3 · Post size</h2>
+    <div class="row" id="sizes"></div>
+
+    <h2>4 · Lettering</h2>
+    <label>Caption <input id="caption" type="text" maxlength="24" value="PALM HEAT"></label>
+    <label>Subtitle <input id="subtitle" type="text" maxlength="40" value="a sunset story in Leonida"></label>
+    <label>Badge <input id="badge" type="text" maxlength="12" value="WANTED"></label>
+    <label>Heat meter
+      <select id="stars">
+        <option value="1">★☆☆☆☆</option>
+        <option value="2">★★☆☆☆</option>
+        <option value="3">★★★☆☆</option>
+        <option value="4">★★★★☆</option>
+        <option value="5" selected>★★★★★</option>
+      </select>
+    </label>
+
+    <h2>5 · Photos &amp; crop</h2>
+    <p class="hint" id="panelLabel">Panel 1 of 4</p>
+    <div class="row" id="panelList"></div>
+    <div class="row" id="photoPick">
+      <button class="pick" type="button" data-photo="boulevard">Boulevard photo</button>
+      <button class="pick" type="button" data-photo="pier">Pier photo</button>
+    </div>
+    <label class="upload">Upload your own photo <input id="upload" type="file" accept="image/*"></label>
+    <button class="pick" id="fillAll" type="button">Fill all panels with this photo</button>
+    <label>Zoom <span id="zoomLabel">100%</span>
+      <input id="zoom" type="range" min="50" max="300" value="100">
+    </label>
+    <p class="hint">Click a panel, then drag it to position the photo and scroll to zoom. One photo can fill every panel, or each panel can hold its own.</p>
+
+    <h2>6 · Finish</h2>
+    <label class="check"><input id="grain" type="checkbox" checked> Film grain</label>
+    <label class="check"><input id="vignette" type="checkbox" checked> Vignette</label>
+    <div class="row">
+      <button id="undo" type="button">Undo</button>
+      <button id="redo" type="button">Redo</button>
+    </div>
+    <button id="export" type="button">Export PNG</button>
     <p id="status" role="status"></p>
+    <p class="fine">Photos never leave your machine. All art, lettering and fonts are original; Anton and Pacifico are licensed under the SIL Open Font License.</p>
   </section>
-  <canvas id="cover" width="1080" height="1080" aria-label="The cover"></canvas>
+  <section class="preview" aria-label="Cover preview">
+    <canvas id="cover" width="640" height="640" aria-label="The cover preview"></canvas>
+  </section>
 </main>
 <script type="module" src="./src/main.js"></script>
 </body>
