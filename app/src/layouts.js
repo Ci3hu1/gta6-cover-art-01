@@ -1,119 +1,98 @@
-// Panel layouts — five ways to arrange five photos on a cover, all drawn from
-// one design system: a hero panel (the face, the story's lead) plus four
-// supporting panels of varied sizes, with a thin gap and thick inked frames.
-// The hero panel is always TALL, never a wide short strip: a wide strip is
-// what cropped the v2 hero's face. Every layout keeps the hero at least
-// 1.8x the median panel area so the eye lands on the lead first.
-//
-// layoutPanels(id, w, h, gap) -> [{ x, y, w, h, role, rot }] in canvas pixels,
-// where (w, h) is the panel area ABOVE the title block. Roles: 'hero' first,
-// then 'a', 'b', 'c', 'd' in reading order.
+// Palm Heat Cover Studio — layouts.js
+// The panel grids. Every layout is a hero-led comic grid: one big hero
+// panel (top-left, the GTA 6 cover keeps its hero there), supporting panels
+// in varied sizes, diagonal visual flow, rule-of-thirds focal points.
+// All coordinates are in cover pixels for the layout's native size.
 
-function split(total, parts, gap) {
-  // Split `total` px into `parts` lengths with `gap` px between them.
-  const usable = total - gap * (parts.length - 1);
-  const weights = parts.reduce((a, b) => a + b, 0);
-  let at = 0;
-  return parts.map((p) => {
-    const len = Math.round((usable * p) / weights);
-    const out = { at, len };
-    at += len + gap;
-    return out;
-  });
-}
+export const MARGIN = 28;
+export const GUTTER = 14;
 
 export const LAYOUTS = [
-  { id: 'hero', name: 'Hero-led' },
-  { id: 'grid', name: 'Classic Grid' },
-  { id: 'portrait', name: 'Portrait' },
-  { id: 'strip', name: 'Sunset Strip' },
-  { id: 'tilted', name: 'Tilted Snapshots' },
+  { id: 'hero', name: 'Hero-led', w: 1080, h: 1080 },
+  { id: 'classic', name: 'Classic Grid', w: 1080, h: 1080 },
+  { id: 'portrait', name: 'Portrait', w: 1080, h: 1350 },
+  { id: 'wide', name: 'Wide', w: 1920, h: 1080 },
+  { id: 'tilted', name: 'Tilted Snapshots', w: 1080, h: 1080 },
 ];
 
 export function layoutById(id) {
-  return LAYOUTS.find((l) => l.id === id) || LAYOUTS[0];
+  return LAYOUTS.find((l) => l.id === id) ?? LAYOUTS[0];
 }
 
-export function layoutPanels(id, w, h, gap = 8) {
-  const g = Math.max(4, Math.round(gap));
-  switch (id) {
-    case 'grid': {
-      // Two rows: 2 panels on top, 3 below — a comic grid, no panel dominant.
-      const rows = split(h, [9, 11], g);
-      const top = split(w, [1, 1], g);
-      const bot = split(w, [1, 1, 1], g);
+// Panel rects: { x, y, w, h, role, tilt? }. Exactly five panels per layout,
+// one per photo in the default preset — a photo is never repeated in a poster.
+export function layoutPanels(layoutId) {
+  const M = MARGIN;
+  const G = GUTTER;
+  switch (layoutId) {
+    case 'classic': {
+      // 3 across the top, 2 wide across the bottom.
+      const tw = (1080 - 2 * M - 2 * G) / 3;
+      const th = 499;
+      const bw = (1080 - 2 * M - G) / 2;
+      const bh = 511;
       return [
-        { x: top[0].at, y: rows[0].at, w: top[0].len, h: rows[0].len, role: 'hero', rot: 0 },
-        { x: top[1].at, y: rows[0].at, w: top[1].len, h: rows[0].len, role: 'a', rot: 0 },
-        { x: bot[0].at, y: rows[1].at, w: bot[0].len, h: rows[1].len, role: 'b', rot: 0 },
-        { x: bot[1].at, y: rows[1].at, w: bot[1].len, h: rows[1].len, role: 'c', rot: 0 },
-        { x: bot[2].at, y: rows[1].at, w: bot[2].len, h: rows[1].len, role: 'd', rot: 0 },
+        { x: M, y: M, w: tw, h: th, role: 'hero' },
+        { x: M + tw + G, y: M, w: tw, h: th, role: 'support' },
+        { x: M + 2 * (tw + G), y: M, w: tw, h: th, role: 'support' },
+        { x: M, y: M + th + G, w: bw, h: bh, role: 'support' },
+        { x: M + bw + G, y: M + th + G, w: bw, h: bh, role: 'support' },
       ];
     }
     case 'portrait': {
-      // Hero wide on top, 2x2 grid below. The hero is wide but TALL (55% of
-      // the area), so a face still fits — the face-safe crop guarantees it.
-      const rows = split(h, [11, 9], g);
-      const bot = split(w, [1, 1], g);
-      const botRows = split(rows[1].len, [1, 1], g);
+      // Hero full-width on top, 2x2 grid below.
+      const cw = (1080 - 2 * M - G) / 2;
+      const ch = 320;
       return [
-        { x: 0, y: rows[0].at, w, h: rows[0].len, role: 'hero', rot: 0 },
-        { x: bot[0].at, y: rows[1].at + botRows[0].at, w: bot[0].len, h: botRows[0].len, role: 'a', rot: 0 },
-        { x: bot[1].at, y: rows[1].at + botRows[0].at, w: bot[1].len, h: botRows[0].len, role: 'b', rot: 0 },
-        { x: bot[0].at, y: rows[1].at + botRows[1].at, w: bot[0].len, h: botRows[1].len, role: 'c', rot: 0 },
-        { x: bot[1].at, y: rows[1].at + botRows[1].at, w: bot[1].len, h: botRows[1].len, role: 'd', rot: 0 },
+        { x: M, y: M, w: 1080 - 2 * M, h: 640, role: 'hero' },
+        { x: M, y: 682, w: cw, h: ch, role: 'support' },
+        { x: M + cw + G, y: 682, w: cw, h: ch, role: 'support' },
+        { x: M, y: 1016, w: cw, h: ch, role: 'support' },
+        { x: M + cw + G, y: 1016, w: cw, h: ch, role: 'support' },
       ];
     }
-    case 'strip': {
-      // 2x2 grid on top, one wide sunset strip along the bottom — the strip
-      // is where an empty-sky photo earns its keep as a breather.
-      const rows = split(h, [7, 3], g);
-      const top = split(w, [1, 1], g);
-      const topRows = split(rows[0].len, [1, 1], g);
+    case 'wide': {
+      // Hero down the whole left side, 2x2 grid on the right.
+      const cw = (1920 - M - 880 - G - M - G) / 2;
+      const ch = 505;
       return [
-        { x: top[0].at, y: rows[0].at + topRows[0].at, w: top[0].len, h: topRows[0].len, role: 'hero', rot: 0 },
-        { x: top[1].at, y: rows[0].at + topRows[0].at, w: top[1].len, h: topRows[0].len, role: 'a', rot: 0 },
-        { x: top[0].at, y: rows[0].at + topRows[1].at, w: top[0].len, h: topRows[1].len, role: 'b', rot: 0 },
-        { x: top[1].at, y: rows[0].at + topRows[1].at, w: top[1].len, h: topRows[1].len, role: 'c', rot: 0 },
-        { x: 0, y: rows[1].at, w, h: rows[1].len, role: 'd', rot: 0 },
+        { x: M, y: M, w: 880, h: 1024, role: 'hero' },
+        { x: 922, y: M, w: cw, h: ch, role: 'support' },
+        { x: 922 + cw + G, y: M, w: cw, h: ch, role: 'support' },
+        { x: 922, y: M + ch + G, w: cw, h: ch, role: 'support' },
+        { x: 922 + cw + G, y: M + ch + G, w: cw, h: ch, role: 'support' },
       ];
     }
     case 'tilted': {
-      // Five snapshot frames, slightly rotated, overlapping on the dark
-      // background like photos tossed on a table. Overlap is intentional.
-      const cw = Math.round(w * 0.36);
-      const ch = Math.round(h * 0.52);
-      return [
-        { x: Math.round(w * 0.03), y: Math.round(h * 0.04), w: cw, h: ch, role: 'hero', rot: -3 },
-        { x: Math.round(w * 0.36), y: Math.round(h * 0.02), w: cw, h: ch, role: 'a', rot: 2 },
-        { x: Math.round(w * 0.62), y: Math.round(h * 0.06), w: Math.round(w * 0.34), h: ch, role: 'b', rot: -2 },
-        { x: Math.round(w * 0.12), y: Math.round(h * 0.46), w: cw, h: ch, role: 'c', rot: 2 },
-        { x: Math.round(w * 0.48), y: Math.round(h * 0.44), w: Math.round(w * 0.38), h: ch, role: 'd', rot: -3 },
-      ];
+      // Same grid as hero-led, but the supporting panels sit tilted like
+      // taped-down snapshots, with a white polaroid border.
+      return layoutPanels('hero').map((p, i) =>
+        p.role === 'hero'
+          ? p
+          : { ...p, tilt: i % 2 === 0 ? -0.035 : 0.03, border: 10 },
+      );
     }
     case 'hero':
     default: {
-      // Hero-led: a TALL hero on the left (39% of the width, full height),
-      // four supporting panels in a 2x2 grid on the right.
-      const cols = split(w, [39, 61], g);
-      const right = split(cols[1].len, [1, 1], g);
-      const rightRows = split(h, [1, 1], g);
+      // Hero 2x top-left, two stacked on the right, two wide on the bottom.
       return [
-        { x: cols[0].at, y: 0, w: cols[0].len, h, role: 'hero', rot: 0 },
-        { x: cols[1].at + right[0].at, y: rightRows[0].at, w: right[0].len, h: rightRows[0].len, role: 'a', rot: 0 },
-        { x: cols[1].at + right[1].at, y: rightRows[0].at, w: right[1].len, h: rightRows[0].len, role: 'b', rot: 0 },
-        { x: cols[1].at + right[0].at, y: rightRows[1].at, w: right[0].len, h: rightRows[1].len, role: 'c', rot: 0 },
-        { x: cols[1].at + right[1].at, y: rightRows[1].at, w: right[1].len, h: rightRows[1].len, role: 'd', rot: 0 },
+        { x: M, y: M, w: 640, h: 640, role: 'hero' },
+        { x: 682, y: M, w: 370, h: 313, role: 'support' },
+        { x: 682, y: 355, w: 370, h: 313, role: 'support' },
+        { x: M, y: 682, w: 505, h: 370, role: 'support' },
+        { x: 547, y: 682, w: 505, h: 370, role: 'support' },
       ];
     }
   }
 }
 
-/** Area of the hero panel vs the median panel area, for the hero-dominance rule. */
-export function heroDominance(id, w, h) {
-  const panels = layoutPanels(id, w, h);
-  const hero = panels.find((p) => p.role === 'hero');
-  const areas = panels.map((p) => p.w * p.h).sort((a, b) => a - b);
-  const median = areas[Math.floor(areas.length / 2)];
-  return (hero.w * hero.h) / median;
+// Native export sizes: square post, portrait post, wide post.
+export const EXPORT_SIZES = [
+  { id: '1080x1080', label: 'Square 1080 x 1080', w: 1080, h: 1080 },
+  { id: '1080x1350', label: 'Portrait 1080 x 1350', w: 1080, h: 1350 },
+  { id: '1920x1080', label: 'Wide 1920 x 1080', w: 1920, h: 1080 },
+];
+
+export function exportSizeById(id) {
+  return EXPORT_SIZES.find((s) => s.id === id) ?? EXPORT_SIZES[0];
 }

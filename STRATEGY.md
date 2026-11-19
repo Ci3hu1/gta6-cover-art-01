@@ -1,45 +1,55 @@
-# STRATEGY — Palm Heat Cover Studio v2.1
+# Strategy — Palm Heat Cover Studio v2.1
 
-## The edge
-The judge compares screenshots pairwise, and the cover screenshot goes on
-top of the contact sheet at the largest size. So the whole entry is built
-backwards from that one image: it must read as GTA cover art at a glance.
-Three things do that, in order:
+## The bet
 
-1. **Real ink, not a filter.** The pipeline detects edges from the photo
-   itself and redraws them as thick black outlines, flattens the photo to
-   five tones, and screens halftone dots into the shadows. That is the
-   Stephen Bliss look — pulp + comic + high fashion — and it is what
-   separates this entry from every flat duotone filter in the field. The
-   five grades restyle the same ink, so one photo gives five different
-   posters.
-2. **A face that survives the crop.** The hero panel is tall, the crop is
-   anchored on a measured focus point, and a safe box (head + shoulders)
-   is guaranteed visible — letterboxed before it is ever cut. A cover
-   whose lead has no face loses to one whose lead does, whatever the
-   filter.
-3. **A story in the details.** "OCEAN DR" and "LEONIDA" hidden in the
-   panels, a WANTED badge, a five-star heat meter, a neon-script subtitle
-   under a hard-outlined title. The poster tells you where you are and
-   what happened there.
+The judge compares screenshots two at a time and picks the better cover
+art app. The live top 10 are all multi-panel cover makers with several
+grades and layouts — so the entry must match that feature list AND win on
+the one thing a title cannot show: the art itself must look inked, not
+filtered.
 
-## What was tried and dropped
-- **Flat duotone grade (v1).** A single orange overlay over the photo.
-  Looked like a filter, not art. Dropped for the ink pipeline.
-- **Repeated photos across panels (v1).** Two photos reused in four
-  panels. Looked cheap at a glance. Now six distinct samples, five
-  different ones in every default cover.
-- **Wide short hero panel (v2).** Cropped the lead's face. Dropped: the
-  hero is tall in every layout, and the safe-box rule is enforced in code
-  and tests.
-- **Empty-sky panel as a full panel (v2).** The foggy sunset read as
-  blank gradient. Now its cloud band is the focus, and wide empty photos
-  go in the Sunset Strip layout where emptiness is the point.
+## How it wins
 
-## Expected outcome
-The entry contends beside the 7-ace rung (inked/banded panels, halftone
-title block, tilted snapshots, story size, undo/redo) with a cover whose
-lead face is always visible. Live score is the judge — the local tests
-only prove the framing rules hold; the resubmission loop (up to 5 per
-competition, ~20 minutes apart, only on a real improvement) decides the
-next version.
+1. **The ink pipeline is the edge.** Every panel goes through real pixel
+   code — Sobel edges dilated into thick black outlines, 5-tone
+   posterize, Bayer halftone in the shadows, paper grain — before the
+   grade palette is applied. At contact-sheet size the posters read as
+   hand-inked comic art, which is exactly the GTA look (Stephen Bliss:
+   thick black ink, halftone shadows, limited bold palette) and exactly
+   what a flat duotone filter cannot fake.
+2. **Hero-led hierarchy.** The hero panel is 2×, top-left, with the face
+   fully in frame; supporting panels vary in size; the eye travels
+   diagonally. Five layouts keep one design system (same frames, same
+   title block, same badge) so every export looks like the same studio.
+3. **Five grades that re-ink, not tint.** Each grade is its own 5-step
+   palette + ink colour + halftone density, so Neon Night and Noir Ink
+   are genuinely different posters from the same photos.
+4. **Story details sell the fiction.** "OCEAN DR", the "LEONIDA" plate,
+   the WANTED badge and the 5-star heat meter are the hidden-signature
+   details Bliss puts in panels — small, but they make the poster tell a
+   story instead of decorating a photo.
+5. **Fast and easy is a scored criterion.** Six bundled photos, one-click
+   presets (Palm Heat / Neon Drive / Night Shift), per-panel focal
+   sliders, undo/redo, one-click PNG export in all three post sizes —
+   photo to shareable PNG in under a minute, offline.
+
+## Tried and dropped
+
+- Flat duotone grade (v1): looked like a filter; the user said
+  "kurang bagus". Replaced by the ink pipeline.
+- Repeating the same 2 photos across panels (v1): reads as a template.
+  Six photos, one per panel.
+- Title over the bottom row at 0.135×H: clipped the star row and buried
+  the bottom panels. Shrunk to 0.115×H, stars clear the frame.
+
+## Expected outcomes
+
+- Gate: app/ within caps, 4 screenshots ≤ 256 KiB, dossier ≤ 1.5 MiB —
+  verified locally (dossier 1,057,451 bytes).
+- Judge: wins on art (inked panels + strong outlined title), any photo
+  (6 samples + upload, per-panel crop), fast/easy (presets, 3 export
+  sizes), polish (offline, undo/redo, grain + vignette).
+- Risk: the picsum photos are random Unsplash images, not Vice City
+  scenes — the ink + grade system is what makes them read as one poster.
+  The skyline photo is the weakest (pale sky); its zoomed horizon crop
+  is the mitigation.

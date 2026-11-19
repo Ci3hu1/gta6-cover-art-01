@@ -1,114 +1,110 @@
-// Fixed scenes for screenshots: ?shot=cover shows the exported cover alone,
-// ?shot=editor the app with a photo loaded, ?shot=portrait a portrait cover,
-// ?shot=layouts five cells side by side: hero, grid, portrait, strip, plus
-// the same hero in Neon Night to show the grades differ. `photos` picks
-// the samples (comma list from samples/<id>.jpg) and `caption` the words.
-// window.__shotReady is set once the scene is painted and the fonts are in.
-import { renderCover, loadImage, sampleById, DEFAULT_COVER_PHOTOS } from './cover.js';
+// Palm Heat Cover Studio — shots.js
+// Fixed scenes for screenshots, driven by ?shot= in the URL.
+//   ?shot=cover&layout=wide&caption=PALM%20HEAT   — the exported cover alone
+//   ?shot=editor&photo=boulevard&caption=...       — the editor with a photo
+//   ?shot=layouts&caption=NEON%20DRIVE             — all four layouts at once
+// window.__shotReady is set once the scene has painted.
 
-async function loadPhotos(ids) {
-  const out = [];
-  for (const id of ids) {
-    const sample = sampleById(id.trim());
-    out.push({ img: await loadImage(sample.file), sample });
-  }
-  return out;
+import { defaultPanels, defaultState, sampleById } from './main.js';
+import { layoutById } from './layouts.js';
+
+function ready() {
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    window.__shotReady = true;
+  }));
 }
 
-function fivePhotos(photos) {
-  const full = [...photos];
-  let i = 0;
-  while (full.length < 5) {
-    const sample = sampleById(DEFAULT_COVER_PHOTOS[i % DEFAULT_COVER_PHOTOS.length]);
-    full.push({ img: full[i % Math.max(1, photos.length)].img, sample });
-    i++;
-  }
-  return full.slice(0, 5);
+function fitCanvas(canvas, w, h) {
+  canvas.width = w;
+  canvas.height = h;
+  canvas.style.width = '100vw';
+  canvas.style.height = '100vh';
+  canvas.style.display = 'block';
 }
 
-async function ready() {
-  try {
-    await Promise.all([
-      document.fonts.load('16px Anton'),
-      document.fonts.load('16px Pacifico'),
-      document.fonts.ready,
-    ]);
-  } catch {
-    await document.fonts.ready;
+async function runCover(query, api) {
+  const layoutId = query.get('layout') ?? 'wide';
+  const caption = query.get('caption') ?? 'PALM HEAT';
+  const layout = layoutById(layoutId);
+  const canvas = document.getElementById('cover');
+  const w = Math.min(window.innerWidth, 1280);
+  const h = Math.round((w * layout.h) / layout.w);
+  fitCanvas(canvas, w, h);
+  const panels = defaultPanels();
+  // The cover shot uses five DIFFERENT photos, one per panel.
+  api.state = {
+    ...defaultState(),
+    caption,
+    subtitle: 'Leonida • Vice City',
+    grade: query.get('grade') ?? 'vice-sunset',
+    layout: layoutId,
+    panels,
+  };
+  await api.renderInto(canvas);
+  ready();
+}
+
+async function runEditor(query, api) {
+  const photo = query.get('photo') ?? 'boulevard';
+  const caption = query.get('caption') ?? 'PALM HEAT';
+  const s = sampleById(photo);
+  api.state = {
+    ...defaultState(),
+    caption,
+    panels: defaultPanels().map((p, i) =>
+      i === 0 ? { photo, fx: s.fx, fy: s.fy, zoom: s.zoom ?? 1, lift: s.lift } : p),
+  };
+  // The editor chrome is built by main.js; here we only paint the cover.
+  const canvas = document.getElementById('cover');
+  canvas.width = 640;
+  canvas.height = 640;
+  await api.renderInto(canvas);
+  ready();
+}
+
+async function runLayouts(query, api) {
+  const caption = query.get('caption') ?? 'NEON DRIVE';
+  const canvas = document.getElementById('cover');
+  const W = window.innerWidth;
+  const H = window.innerHeight;
+  fitCanvas(canvas, W, H);
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#14101a';
+  ctx.fillRect(0, 0, W, H);
+  const ids = ['hero', 'classic', 'portrait', 'wide'];
+  const labels = ['Hero-led', 'Classic Grid', 'Portrait', 'Wide'];
+  const cellW = Math.floor((W - 60) / 2);
+  const cellH = Math.floor((H - 90) / 2);
+  for (let i = 0; i < 4; i++) {
+    const cx = 20 + (i % 2) * (cellW + 20);
+    const cy = 20 + Math.floor(i / 2) * (cellH + 25);
+    const layout = layoutById(ids[i]);
+    const scale = Math.min(cellW / layout.w, (cellH - 28) / layout.h);
+    const cw = Math.round(layout.w * scale);
+    const ch = Math.round(layout.h * scale);
+    const off = document.createElement('canvas');
+    off.width = cw;
+    off.height = ch;
+    api.state = {
+      ...defaultState(),
+      caption,
+      subtitle: 'Leonida • Vice City',
+      grade: i % 2 === 0 ? 'vice-sunset' : 'neon-night',
+      layout: ids[i],
+      panels: defaultPanels(),
+    };
+    await api.renderInto(off);
+    ctx.drawImage(off, cx + (cellW - cw) / 2, cy, cw, ch);
+    ctx.fillStyle = '#f5e6c8';
+    ctx.font = '22px Anton, "Arial Black", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(labels[i], cx + cellW / 2, cy + ch + 24);
   }
-  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-  window.__shotReady = true;
+  ready();
 }
 
 export async function runShot(shot, query, api) {
-  const canvas = document.getElementById('cover');
-  const caption = query.get('caption') ?? 'PALM HEAT';
-  const ids = (query.get('photos') ?? query.get('photo') ?? 'boulevard').split(',');
-  const subtitle = query.get('subtitle') ?? 'a sunset story in Leonida';
-
-  if (shot === 'cover') {
-    document.body.classList.add('shot-cover');
-    canvas.width = 1280;
-    canvas.height = 720;
-    const photos = fivePhotos(await loadPhotos(ids));
-    renderCover(canvas, { photos, caption, subtitle, layoutId: 'hero', gradeId: 'vice' });
-    await ready();
-    return;
-  }
-
-  if (shot === 'portrait') {
-    document.body.classList.add('shot-cover');
-    canvas.width = 1024;
-    canvas.height = 1280;
-    const photos = fivePhotos(await loadPhotos(ids));
-    renderCover(canvas, { photos, caption, subtitle, layoutId: 'portrait', gradeId: 'vice' });
-    await ready();
-    return;
-  }
-
-  if (shot === 'layouts') {
-    document.body.classList.add('shot-cover');
-    canvas.width = 1280;
-    canvas.height = 720;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#14081F';
-    ctx.fillRect(0, 0, 1280, 720);
-    const photos = fivePhotos(await loadPhotos(ids));
-    // Each mini is rendered at its own layout's natural aspect: the portrait
-    // mini is tall, the rest landscape. Rendering a portrait layout into a
-    // landscape cell breaks its composition, so it gets a tall cell.
-    const cells = [
-      { x: 8, y: 8, w: 628, h: 346, layoutId: 'hero', label: 'HERO-LED' },
-      { x: 644, y: 8, w: 628, h: 346, layoutId: 'grid', label: 'CLASSIC GRID' },
-      { x: 8, y: 366, w: 260, h: 346, layoutId: 'portrait', label: 'PORTRAIT' },
-      { x: 276, y: 366, w: 620, h: 346, layoutId: 'strip', label: 'SUNSET STRIP' },
-      // A second grade in hero layout, not the tilted layout: the tilted
-      // snapshots read as a cream block at this size (the neon photo's bright
-      // sky posterizes to the lightest tone), while a Neon Night mini proves
-      // the grades are genuinely different.
-      { x: 904, y: 366, w: 368, h: 346, layoutId: 'hero', gradeId: 'neon', label: 'NEON NIGHT' },
-    ];
-    for (const cell of cells) {
-      const mini = document.createElement('canvas');
-      mini.width = cell.w;
-      mini.height = cell.h;
-      renderCover(mini, { photos, caption, subtitle, layoutId: cell.layoutId, gradeId: cell.gradeId || 'vice' });
-      ctx.drawImage(mini, cell.x, cell.y);
-      ctx.fillStyle = 'rgba(20,8,31,0.85)';
-      ctx.fillRect(cell.x, cell.y, 150, 26);
-      ctx.fillStyle = '#FFD76B';
-      ctx.font = 'bold 15px Anton, sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(cell.label, cell.x + 10, cell.y + 14);
-    }
-    await ready();
-    return;
-  }
-
-  // editor: hand the first photo to the editor and let it render itself.
-  const first = sampleById(ids[0].trim());
-  const img = await loadImage(first.file);
-  api.editorLoad(first, img, caption);
-  await ready();
+  if (shot === 'cover') return runCover(query, api);
+  if (shot === 'layouts') return runLayouts(query, api);
+  return runEditor(query, api);
 }
