@@ -1,78 +1,48 @@
-# Leonida Nights Cover Studio v3 — build notes
+# Leonida Nights Cover Studio — v4 notes
 
-## What v3 is
-A fresh sight-unseen rebuild of the gta6-cover-art-01 entry ("Leonida Nights
-Cover Studio"). v2.1 ("Palm Heat") was rejected by the owner — the heavy
-comic-ink pipeline (Sobel edges → thick outlines → posterize → halftone)
-muddied faces ("makin jelek"). v3 drops that pipeline entirely: photos stay
-clean and photographic with only gentle sunset/Vice colour grades.
+Bounty: `gta6-cover-art-01` — "Make GTA 6 Cover Art". Prize $250, free, escrow USDC.
+Closes 21 Nov 2026 10:30 UTC (17:30 WIB). Results 7 Dec 2026.
+Entry: "Leonida Nights Cover Studio". Repo: https://github.com/Ci3hu1/gta6-cover-art-01
 
-## Top-10 study (live, 20 Nov 2026 ~11:45 WIB; 4,555 entries; scores not yet assigned)
+## v4 top-5 study (fresh, live, 20 Nov 2026 ~12:26–12:30 WIB; 4,697 entries, Judge win rate, all Provisional)
 
-| # | Title | Win rate | What it does |
-|---|-------|----------|--------------|
-| 1 | Palmline / "Sunreel" (el-net) | 95.06% (12W 0D 0L) | Full studio: 3 steps (Add photos → Caption → Export PNG), smart face-aware crops, auto layout, "Surprise me", 3-size export |
-| 2 | HEATWAVE (nightshift-labs) | — | Title over the art, slanted panels, sunset grade, sky glow, per-panel crop, PNG 3 sizes |
-| 3 | Billboard Bay (plntky) | — | Movie-poster key art, pop-out hero cut-out, face-aware crops, auto cast tags, 3 post sizes |
-| 4 | Neon Harbor (limnhere) | — | 7-panel pop-out hero, striped retro-chrome titles, cast role tags, 8 Vice grades, 3-size PNG export |
-| 5 | Vice Cover Studio v3 (regian1117) | — | Twilight Gold Frame, retro-chrome 3D titles, role tags, 8 layouts, 6 grades, 3-size PNG export |
-| 6–10 | Coral Heat / SUNSET HEIST v3 / Sunset State / Neon Coast / VICE STATE | — | All sunset/Vice themed multi-panel poster makers |
+| # | Entrant | Title | Win rate | Live app |
+|---|---------|-------|----------|----------|
+| 1 | el-net | Palmline | 95.06% (12W 0L) | https://gta6cover-7b2c1395.makefun.sh/ |
+| 2 | nightshift-labs | HEATWAVE | 94.81% | https://gta6cover-a74279f4.makefun.sh/ |
+| 3 | plntky | Billboard Bay | 94.68% | https://gta6cover-57851a96.makefun.sh/ |
+| 4 | limnhere | Neon Harbor | 94.68% | — (judged image + studio screenshot) |
+| 5 | regian1117 | Vice Cover Studio v3 | 94.56% | — (judged image + studio screenshot) |
 
-All leaders' source is withheld; only titles, win rates and live-app behaviour
-were visible. The pattern is unanimous: clean-photo poster STUDIOS with
-pop-out heroes, chrome titles over the art, role tags and 3-size export.
+6–10: "Coral Heat" / "SUNSET HEIST v3" / "Sunset State" / "Coastline Cover Studio V5" / "Neon Coast" — all sunset / Vice themed, multi-panel poster makers.
 
-## Official GTA 6 cover (Rockstar, 18 Jun 2026)
-Nine-panel collage around the central GTA VI logo — the classic GTA cover
-tradition. Jason Duval and Lucia Caminos share the top-middle panel, both
-armed, palms and sunset behind them. Pink/purple/orange sunset palette,
-palms + neon. Other panels: helicopter over the skyline, motorcycle wheelie,
-Boobie Ike, flamingo over a speedboat, a gator, Raul Bautista, a yellow
-scissor-door sports car, a woman with sunglasses and a drink by a pool.
-Bright, crowded, restless — a mood board, not a mission list.
+What ALL 5 leaders share (followed in v4):
+1. Hero-led multi-panel grid (5–8 panels); one panel clearly the hero, popping OUT of the grid in #4/#5. Every face fully visible and centred. Title may cover bodies, panel joins and cars — NEVER a face.
+2. HUGE striped retro-chrome title OVER the art in the lower third + a contrasting pink script sub-line overlapping its corner.
+3. COMPLETE magazine furniture: 5-star press-quote band at the top, VOL. pill, gold seal/starburst, tagline ribbon, tiny billing block + barcode along the bottom.
+4. Small black role tags on EVERY person panel; #4 adds a second line (location/time).
+5. Full studio: named sample photos, 7–10 layouts, 5–8 grades, caption fields, undo/redo, 3-size PNG export.
+6. ONE disciplined sunset palette applied to photos, title and frame.
 
-## What was followed
-- Clean photographic panels + gentle grades only (no posterize/halftone/ink).
-- Hero pop-out cut-out overlapping panel borders ~24px, face-aware crop
-  anchored on the upper third so the head + shoulders stay fully in frame.
-- Striped retro-chrome 3D title OVER the art with a scrim, Pacifico neon
-  subtitle, WANTED badge, 5-star heat meter.
-- Cast role tags per panel + story details (OCEAN DR street sign, LEONIDA
-  plate) drawn into panels.
-- Full studio flow: 1 Add photos → 2 Caption → 3 Export PNG (3 sizes),
-  per-panel pan/zoom/flip/swap, undo/redo, auto layout, "Surprise me",
-  grain + vignette toggles.
-- Six grades: Vice Sunset, Neon Night, Golden Coast, Twilight Gold,
-  Teal Pink, Noir. Six layouts: Hero Led, Classic Grid, Portrait,
-  Wide Hero, Slanted, Nine Panel.
-- Six fresh picsum sample photos, picked by content (the brief's first six
-  seeds returned landscapes with no faces — stone steps, a yellow wall,
-  bamboo — so the set was re-picked from picsum IDs/seeds whose content fits:
-  hero = picsum id 1027, a woman's full face; sunset = seed "miami", sunset
-  pier with people; neon = id 453, live stage spotlights; palms = seed
-  "couple", golden sunset street; ocean = id 1053, ocean waves; strip =
-  id 64, woman with sunglasses at golden hour). Default cover uses 5
-  different ones.
+## v3 vs the leaders — gaps v4 closes
 
-## Star fix (carried from the 20 Nov owner report)
-The 5 gold stars under the title are placed bottom-up: the title block is
-computed from the frame's bottom edge, leaving >= 36px of clear space below
-the stars in every layout and every export size. Verified in 1-cover.jpg
-and 3-portrait.jpg and by the Node test (`titleBlockGeometry`).
+- GAP 1 (biggest): v3 had NO magazine furniture. v4 adds all five pieces, every one fully inside the frame in every layout and size.
+- GAP 2: v3's title sat across the hero's chin/mouth in 1-cover.jpg. v4 positions the title block bottom-up with the title top fixed at 66% of poster height; the hero face zone ends above 40% in every layout. Regression test asserts non-overlap for all 8 layouts × 5 sizes.
+- GAP 3: v3's "pop-out hero" was just a big flush left panel. v4's hero breaks ~2% of width past the grid's left edge and ~1.6% of height past its bottom edge, with a drop shadow.
+- GAP 4: v3 had 2–3 faceless landscape panels. v4's 6 bundled samples are ALL people at golden hour (verified by eye, picsum.photos fixed IDs: 64, 1027, 838, 839, 996, 349); default cover uses 5 different people photos, each with a two-line cast tag (role + location/time).
+- GAP 5: v3's palette was inconsistent (pale sepia hero, orange pier, dark-brown concert, yellow street, grey-green ocean). v4 grades EVERYTHING with one golden-hour grade (default) plus 5 sibling sunset grades.
+- GAP 6: v3 had 4 layouts, straight grids only. v4 has 8 layouts (Pop-Out Cast default, Hero Led, Classic Grid, Portrait, Wide Hero, Slant diagonal cuts, 9-Panel, Duo) + 3 frames (Twilight Gold, Dark, Cream).
+- KEPT from v3: clean photographic panels (Poster Ink is an OPTIONAL toggle, default OFF); striped retro-chrome 3D title; Pacifico script sub-line; WANTED badge; 5 stars fully visible with ≥36px clear space below; studio flow; 3-size export; undo/redo; "Surprise me"; auto layout; offline (zero network requests).
 
-## Build log (20 Nov 2026)
-- Fresh kit v7 downloaded; guide 1.5.225; competition strict_transcripts.
-- Recorder started by the parent session (recording 01a1f751-389a-72e7-8bdb-24c7bddac3fb).
-- Fonts Anton + Pacifico (OFL) downloaded from google/fonts; 6 picsum photos
-  downloaded with fixed seeds (800×600).
-- All files written fresh from the v3 brief (sight-unseen rebuild).
-- Tests: `node --test tests/cover.test.mjs` — 8/8 pass.
-- Screenshots: Playwright against `node serve.ts` on :8080; 4 shots in
-  screenshots/ (see shots.json). Verified: clean photos, pop-out hero,
-  chrome title, stars fully visible with clear space below.
-- Superseded: v2.1 commit 754c9776 / recording 01a1f730 — do NOT submit.
-- Status: NOT submitted; awaiting the owner's explicit 'Setuju' on the
-  exact entry (commit + recording + kit check, reported by the parent run).
+## Build log (v4)
+
+- 20 Nov 2026 ~12:42 WIB: builder session started under recording 01a1f779-90aa-705b-a296-16740e0925ef (kit v8, level 27). Sight-unseen rewrite: every file written fresh from the v4 brief.
+- Fonts: Anton-Regular.ttf + Pacifico-Regular.ttf (+ OFL texts) downloaded from google/fonts, vendored under app/fonts/.
+- Samples: 22 picsum candidates downloaded, each viewed; 6 people photos kept (IDs 64, 1027, 838, 839, 996, 349), downloaded at 1200×900 into app/samples/. Landscapes (waterfall, valley, sea stacks, skyline) and faceless/back-of-head shots rejected.
+- Tests: 10 node tests (grades, layouts, title-vs-face × 8 layouts × 5 sizes, stars-in-frame, furniture-in-frame, pop-out bounds, face-aware crop, barcode determinism, default-cover photo diversity) — all pass.
+- Screenshots: 4 Playwright shots against `node serve.ts` on :8080 (zero browser network requests): 1-cover.jpg (1280×720, Pop-Out Cast, 5 people photos), 2-editor.jpg (studio), 3-portrait.jpg (1024×1280, Portrait layout), 4-layouts.jpg (all 8 layouts, "NEON DRIVE").
+- v3 (commit 3700d491 / recording 01a1f751) is SUPERSEDED — do not submit it.
 
 ## Live scores
-- v3: not yet submitted (awaiting 'Setuju').
+
+- v4: not yet submitted — awaiting owner's 'Setuju' on the exact entry.

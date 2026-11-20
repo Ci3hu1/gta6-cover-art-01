@@ -1,75 +1,68 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Leonida Nights — GTA 6 Cover Studio</title>
-<link rel="icon" href="data:,">
+<title>Leonida Nights Cover Studio — GTA 6-style cover art maker</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="topbar">
-  <div class="brand"><span class="logo">LEONIDA NIGHTS</span><span class="sub">Cover Studio</span></div>
-  <div class="top-actions">
-    <button id="undoBtn" type="button">Undo</button>
-    <button id="redoBtn" type="button">Redo</button>
-    <button id="surpriseBtn" type="button" class="accent">Surprise me</button>
-    <button id="autoBtn" type="button">Auto layout</button>
+<header>
+  <div class="brand">
+    <h1>Leonida Nights <span>Cover Studio</span></h1>
+    <p>Turn any photo into GTA 6-style cover art. Offline — your photos never leave this machine.</p>
+  </div>
+  <div class="header-actions">
+    <button id="undo-btn" type="button" disabled>Undo</button>
+    <button id="redo-btn" type="button" disabled>Redo</button>
+    <button id="export-all-btn" type="button">Export all 3 sizes</button>
+    <button id="export-btn" type="button" class="primary">Export PNG</button>
   </div>
 </header>
-
-<main class="studio">
-  <section class="preview-col">
-    <canvas id="preview" width="600" height="600" aria-label="Cover preview"></canvas>
-    <p class="hint">Click a panel to select it, then crop and tag it below. The hero pops out of the grid — its face is never cropped.</p>
-    <p id="panelLabel" class="panel-label">Panel 1 — LUCIA</p>
+<main>
+  <section class="preview-wrap">
+    <canvas id="preview" width="1920" height="1080"></canvas>
+    <p class="hint">Live preview — what you see is the PNG you export. Title never covers a face.</p>
   </section>
-
-  <section class="controls-col">
-    <div class="step">
-      <h2>1 · Add photos</h2>
-      <p class="step-note">Tap a photo to put it in the selected panel, or upload your own. Photos never leave your machine.</p>
-      <div id="photoStrip" class="photo-strip"></div>
-      <label class="upload">Upload a photo
-        <input id="uploadInput" type="file" accept="image/*">
-      </label>
-    </div>
-
-    <div class="step">
-      <h2>2 · Caption</h2>
-      <label>Title <input id="titleInput" type="text" value="LEONIDA NIGHTS" maxlength="24"></label>
-      <label>Subtitle <input id="subtitleInput" type="text" value="Vice City Nights" maxlength="40"></label>
-      <label>Cast tag for this panel <input id="tagInput" type="text" value="LUCIA" maxlength="12"></label>
-      <div class="row">
-        <span class="lbl">Layout · <b id="layoutName">Hero Led</b></span>
-        <div id="layoutRow" class="chips"></div>
-      </div>
-      <div class="row">
-        <span class="lbl">Grade · <b id="gradeName">Vice Sunset</b></span>
-        <div id="gradeRow" class="chips"></div>
-      </div>
-      <div class="row sliders">
-        <label>Zoom <input id="zoomRange" type="range" min="1" max="2.5" step="0.05" value="1"></label>
-        <label>Pan X <input id="panXRange" type="range" min="-0.4" max="0.4" step="0.02" value="0"></label>
-        <label>Pan Y <input id="panYRange" type="range" min="-0.4" max="0.4" step="0.02" value="0"></label>
-      </div>
-      <div class="row">
-        <button id="flipBtn" type="button">Flip</button>
-        <button id="swapBtn" type="button">Swap with next</button>
-        <label class="check"><input id="grainToggle" type="checkbox" checked> Grain</label>
-        <label class="check"><input id="vignetteToggle" type="checkbox" checked> Vignette</label>
-      </div>
-    </div>
-
-    <div class="step">
-      <h2>3 · Export PNG</h2>
-      <p class="step-note">Clean photographic posters — no posterize, no halftone, no ink. One click per size.</p>
-      <div id="exportRow" class="export-row"></div>
-    </div>
-  </section>
+  <div id="layouts-overview" hidden></div>
+  <aside class="controls">
+    <section>
+      <h2>Caption</h2>
+      <label class="field"><span>Title</span><input id="title-input" type="text" value="LEONIDA NIGHTS" maxlength="24"></label>
+      <label class="field"><span>Script subtitle</span><input id="subtitle-input" type="text" value="Vice City Nights" maxlength="32"></label>
+      <label class="field"><span>Tagline ribbon</span><input id="tagline-input" type="text" value="FIVE LIVES · ONE COAST · NO WAY BACK" maxlength="48"></label>
+    </section>
+    <section>
+      <h2>Layout</h2>
+      <div id="layout-btns" class="btn-grid"></div>
+    </section>
+    <section>
+      <h2>Golden-hour grade</h2>
+      <div id="grade-btns" class="btn-grid"></div>
+    </section>
+    <section>
+      <h2>Frame &amp; finish</h2>
+      <label class="field"><span>Frame</span><select id="frame-select"></select></label>
+      <label class="check"><input id="ink-toggle" type="checkbox"> Poster Ink (painterly — off by default)</label>
+      <label class="check"><input id="grain-toggle" type="checkbox" checked> Film grain</label>
+      <label class="check"><input id="vignette-toggle" type="checkbox" checked> Vignette</label>
+    </section>
+    <section>
+      <h2>Export size</h2>
+      <div id="size-btns" class="btn-grid"></div>
+    </section>
+    <section>
+      <h2>Cast panels</h2>
+      <div id="panel-list"></div>
+      <label class="field"><span>Add your own photos</span><input id="add-photos" type="file" accept="image/*" multiple></label>
+    </section>
+    <section class="actions">
+      <button id="surprise-btn" type="button">Surprise me</button>
+      <button id="auto-btn" type="button">Auto layout</button>
+    </section>
+    <p class="fineprint">Offline web app · Anton + Pacifico (SIL OFL) · Sample photos: CC0 via picsum.photos · No Rockstar artwork, logos or fonts.</p>
+  </aside>
 </main>
-
-<canvas id="shotCanvas" class="shot-canvas"></canvas>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

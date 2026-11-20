@@ -1,62 +1,72 @@
-// shots.js — screenshot scenes driven by ?shot= query params.
-// The screenshots are the app's own drawing at the requested size, never
-// edited or composited afterwards:
-//   ?shot=cover&caption=LEONIDA%20NIGHTS   full-bleed cover at viewport size
-//   ?shot=editor                            the studio UI with photos loaded
-//   ?shot=layouts&caption=NEON%20DRIVE     2 x 2 overview of four layouts
-// The cover scene renders at the viewport's own aspect ratio, so a 1280x720
-// viewport gives the 16:9 cover and a 1024x1280 viewport the 4:5 portrait.
+// Leonida Nights Cover Studio v4 — screenshot scenes.
+// ?shot=cover     full-bleed exported cover, Pop-Out Cast, 5 people photos
+// ?shot=editor    the normal studio (default, no query)
+// ?shot=portrait  portrait layout cover, 1024 x 1280
+// ?shot=layouts   overview of all 8 layouts, caption "NEON DRIVE"
+// Returns true when a shot scene took over (boot then skips the studio).
 
-import { renderCover, defaultState } from './cover.js';
 import { LAYOUTS } from './layouts.js';
+import { renderPoster } from './cover.js';
 
-export function parseShotParams(search) {
-  const q = new URLSearchParams(search);
-  const shot = q.get('shot');
-  if (!shot) return null;
-  return {
-    mode: shot,
-    title: (q.get('caption') || 'LEONIDA NIGHTS').toUpperCase(),
-    subtitle: q.get('subtitle') || 'Vice City Nights',
-    layout: q.get('layout') || 'hero-led',
-    grade: q.get('grade') || 'vice-sunset',
-  };
+function setShotClass(cls) {
+  document.body.classList.add('shot', cls);
+  document.querySelector('header').style.display = 'none';
+  document.querySelector('.controls').style.display = 'none';
+  document.querySelector('main').classList.add('shot-main');
 }
 
-export function stateFromParams(params, overrides = {}) {
-  const state = defaultState();
-  state.title = params.title;
-  state.subtitle = params.subtitle;
-  state.layout = params.layout;
-  state.grade = params.grade;
-  Object.assign(state, overrides);
-  return state;
-}
+export function handleShotMode(state, preview, exportPNG) {
+  const params = new URLSearchParams(location.search);
+  const shot = params.get('shot');
+  if (!shot || shot === 'editor') return false;
 
-// Full-bleed cover scene (modes: cover, portrait).
-export function drawCoverShot(ctx, W, H, params, images) {
-  renderCover(ctx, W, H, stateFromParams(params), images);
-}
+  if (shot === 'cover') {
+    setShotClass('shot-cover');
+    state.title = 'LEONIDA NIGHTS';
+    state.subtitle = 'Vice City Nights';
+    state.layoutId = 'popout';
+    state.gradeId = 'golden-hour';
+    state.frameId = 'gold';
+    renderPoster(preview, state, 1280, 720);
+    return true;
+  }
 
-// Layout overview: four layouts in a 2 x 2 grid with name labels.
-export function drawLayoutsShot(ctx, W, H, params, images) {
-  ctx.fillStyle = '#160b26';
-  ctx.fillRect(0, 0, W, H);
-  const ids = ['hero-led', 'grid', 'portrait', 'wide'];
-  const gap = 12, labelH = 34;
-  const cw = (W - gap * 3) / 2, ch = (H - gap * 3 - labelH * 2) / 2;
-  ids.forEach((id, i) => {
-    const col = i % 2, row = Math.floor(i / 2);
-    const x = gap + col * (cw + gap), y = gap + row * (ch + labelH + gap);
-    const off = document.createElement('canvas');
-    off.width = Math.round(cw); off.height = Math.round(ch);
-    renderCover(off.getContext('2d'), off.width, off.height,
-      stateFromParams(params, { layout: id, grade: 'neon-night' }), images);
-    ctx.drawImage(off, x, y, cw, ch);
-    ctx.fillStyle = '#ffe9a8';
-    ctx.font = `700 ${Math.round(labelH * 0.5)}px Arial, sans-serif`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText((LAYOUTS.find((l) => l.id === id) || {}).name || id, x + 4, y + ch + labelH / 2);
-  });
+  if (shot === 'portrait') {
+    setShotClass('shot-portrait');
+    state.title = 'LEONIDA NIGHTS';
+    state.subtitle = 'Vice City Nights';
+    state.layoutId = 'portrait';
+    state.gradeId = 'golden-hour';
+    state.frameId = 'gold';
+    renderPoster(preview, state, 1024, 1280);
+    return true;
+  }
+
+  if (shot === 'layouts') {
+    setShotClass('shot-layouts');
+    document.querySelector('.preview-wrap').style.display = 'none';
+    const overview = document.getElementById('layouts-overview');
+    overview.hidden = false;
+    const head = document.createElement('h2');
+    head.textContent = 'NEON DRIVE — all 8 layouts';
+    overview.appendChild(head);
+    const grid = document.createElement('div');
+    grid.className = 'layouts-grid';
+    overview.appendChild(grid);
+    for (const layout of LAYOUTS) {
+      const fig = document.createElement('figure');
+      const canvas = document.createElement('canvas');
+      const shotState = { ...state, title: 'NEON DRIVE', layoutId: layout.id, overrides: {} };
+      renderPoster(canvas, shotState, 960, 540);
+      canvas.style.width = '100%';
+      const cap = document.createElement('figcaption');
+      cap.textContent = layout.name;
+      fig.appendChild(canvas);
+      fig.appendChild(cap);
+      grid.appendChild(fig);
+    }
+    return true;
+  }
+
+  return false;
 }

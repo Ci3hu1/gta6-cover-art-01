@@ -1,6 +1,9 @@
-// Tiny static server for app/ (Node 22, stdlib only): `node serve.ts` serves
-// app/ on http://localhost:8080. Development convenience only — the app
-// itself is plain static files and makes no network requests.
+// Leonida Nights Cover Studio v4 — tiny static server for app/ (Node 22,
+// stdlib only). `node serve.ts` serves app/ on http://localhost:8080.
+// Serves only files under app/, with the MIME types an offline web app
+// needs; this is a development convenience, not a web server for the
+// internet.
+
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
@@ -63,5 +66,5 @@ createServer((request, response) => {
   });
   createReadStream(file).pipe(response);
 }).listen(port, '127.0.0.1', () => {
-  console.log(`Leonida Nights studio is on http://localhost:${port}`);
+  console.log(`Leonida Nights Cover Studio v4 is on http://localhost:${port}`);
 });

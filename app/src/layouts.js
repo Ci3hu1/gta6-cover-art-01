@@ -1,172 +1,163 @@
-// layouts.js — six cover layouts, pure geometry (no DOM, Node-testable).
-// Every layout returns panels as pixel rects in a W x H cover, plus which
-// panel is the hero. The hero is drawn POPPED OUT of its cell (see cover.js:
-// expanded ~24px, soft edge, drop shadow, white keyline) so it stands proud
-// of the grid like Billboard Bay / Neon Harbor.
-//
-// Panel tags are cast role tags drawn on the panels (LUCIA, JASON, ...).
-// `photo` is an index into the state's photo list; the default cover preset
-// assigns 5 DIFFERENT photos, one per panel.
+// Leonida Nights Cover Studio v4 — layouts.
+// Rects are fractions of the poster (x/w of width, y/h of height).
+// The grid always lives between the press-quote band (top) and the title
+// block (bottom), so the title can never touch a face: every panel's face
+// zone ends well above the title's top edge (see cover.js titleGeometry).
+
+export const GRID = { x0: 0.028, x1: 0.972, y0: 0.095, y1: 0.635 };
+
+// gap between panels, as a fraction of width
+const GAP = 0.012;
+
+function panel(id, x, y, w, h, opts = {}) {
+  return { id, x, y, w, h, hero: !!opts.hero, popout: !!opts.popout, slant: !!opts.slant };
+}
 
 export const LAYOUTS = [
-  { id: 'hero-led', name: 'Hero Led' },
-  { id: 'grid', name: 'Classic Grid' },
-  { id: 'portrait', name: 'Portrait' },
-  { id: 'wide', name: 'Wide Hero' },
-  { id: 'slanted', name: 'Slanted' },
-  { id: 'nine', name: 'Nine Panel' },
+  {
+    id: 'popout',
+    name: 'Pop-Out Cast',
+    blurb: 'Hero breaks out of the grid',
+    panels: [
+      panel('hero', 0.028, 0.095, 0.49, 0.54, { hero: true, popout: true }),
+      panel('p2', 0.535, 0.095, 0.2125, 0.264),
+      panel('p3', 0.7595, 0.095, 0.2125, 0.264),
+      panel('p4', 0.535, 0.371, 0.2125, 0.264),
+      panel('p5', 0.7595, 0.371, 0.2125, 0.264),
+    ],
+  },
+  {
+    id: 'hero-led',
+    name: 'Hero Led',
+    blurb: 'Big hero, three stacked',
+    panels: [
+      panel('hero', 0.028, 0.095, 0.52, 0.54, { hero: true }),
+      panel('p2', 0.56, 0.095, 0.412, 0.172),
+      panel('p3', 0.56, 0.279, 0.412, 0.172),
+      panel('p4', 0.56, 0.463, 0.412, 0.172),
+    ],
+  },
+  {
+    id: 'classic',
+    name: 'Classic Grid',
+    blurb: 'Wide hero over three',
+    panels: [
+      panel('hero', 0.028, 0.095, 0.622, 0.264, { hero: true }),
+      panel('p2', 0.662, 0.095, 0.31, 0.264),
+      panel('p3', 0.028, 0.371, 0.305, 0.264),
+      panel('p4', 0.345, 0.371, 0.305, 0.264),
+      panel('p5', 0.662, 0.371, 0.31, 0.264),
+    ],
+  },
+  {
+    id: 'portrait',
+    name: 'Portrait',
+    blurb: 'Tall hero, four small',
+    panels: [
+      panel('hero', 0.028, 0.095, 0.46, 0.54, { hero: true }),
+      panel('p2', 0.5, 0.095, 0.23, 0.264),
+      panel('p3', 0.742, 0.095, 0.23, 0.264),
+      panel('p4', 0.5, 0.371, 0.23, 0.264),
+      panel('p5', 0.742, 0.371, 0.23, 0.264),
+    ],
+  },
+  {
+    id: 'wide-hero',
+    name: 'Wide Hero',
+    blurb: 'Full-width hero, four below',
+    panels: [
+      panel('hero', 0.028, 0.095, 0.944, 0.28, { hero: true }),
+      panel('p2', 0.028, 0.387, 0.227, 0.248),
+      panel('p3', 0.267, 0.387, 0.227, 0.248),
+      panel('p4', 0.506, 0.387, 0.227, 0.248),
+      panel('p5', 0.745, 0.387, 0.227, 0.248),
+    ],
+  },
+  {
+    id: 'slant',
+    name: 'Slant',
+    blurb: 'Diagonal panel cuts',
+    panels: [
+      panel('hero', 0.028, 0.095, 0.49, 0.54, { hero: true, slant: true }),
+      panel('p2', 0.535, 0.095, 0.2125, 0.264, { slant: true }),
+      panel('p3', 0.7595, 0.095, 0.2125, 0.264, { slant: true }),
+      panel('p4', 0.535, 0.371, 0.2125, 0.264, { slant: true }),
+      panel('p5', 0.7595, 0.371, 0.2125, 0.264, { slant: true }),
+    ],
+  },
+  {
+    id: 'nine-panel',
+    name: '9-Panel',
+    blurb: 'Official-cover style grid',
+    panels: [
+      panel('p1', 0.028, 0.095, 0.305, 0.172),
+      panel('hero', 0.345, 0.095, 0.305, 0.172, { hero: true }),
+      panel('p3', 0.662, 0.095, 0.31, 0.172),
+      panel('p4', 0.028, 0.279, 0.305, 0.172),
+      panel('p5', 0.345, 0.279, 0.305, 0.172),
+      panel('p6', 0.662, 0.279, 0.31, 0.172),
+      panel('p7', 0.028, 0.463, 0.305, 0.172),
+      panel('p8', 0.345, 0.463, 0.305, 0.172),
+      panel('p9', 0.662, 0.463, 0.31, 0.172),
+    ],
+  },
+  {
+    id: 'duo',
+    name: 'Duo',
+    blurb: 'Two leads, three below',
+    panels: [
+      panel('hero', 0.028, 0.095, 0.6, 0.405, { hero: true }),
+      panel('p2', 0.64, 0.095, 0.332, 0.405),
+      panel('p3', 0.028, 0.512, 0.305, 0.123),
+      panel('p4', 0.345, 0.512, 0.305, 0.123),
+      panel('p5', 0.662, 0.512, 0.31, 0.123),
+    ],
+  },
 ];
 
-const GAP = 10; // px gap between panels, scaled by cover size in layoutPanels
-
-// Face-aware crop anchor: the hero crop is anchored on the upper third of
-// the photo (focusY ~0.22) so head + shoulders stay fully in frame.
-export const HERO_FOCUS = { x: 0.5, y: 0.22 };
-export const PANEL_FOCUS = { x: 0.5, y: 0.45 };
+export const DEFAULT_LAYOUT_ID = 'popout';
 
 export function layoutById(id) {
   return LAYOUTS.find((l) => l.id === id) || LAYOUTS[0];
 }
 
-// rect helper: fractions of W/H -> pixels.
-function r(W, H, fx, fy, fw, fh) {
-  return { x: fx * W, y: fy * H, w: fw * W, h: fh * H };
+// Pixel rects for a layout at poster size W x H.
+// The pop-out hero overflows the grid's left and bottom edges (fractions of
+// W / H) but always stays inside the poster itself.
+export function layoutPixelRects(layoutId, W, H) {
+  const layout = layoutById(layoutId);
+  return layout.panels.map((p) => {
+    let x = p.x * W;
+    let y = p.y * H;
+    let w = p.w * W;
+    let h = p.h * H;
+    if (p.popout) {
+      const overL = 0.02 * W;
+      const overB = 0.016 * H;
+      x = Math.max(2, x - overL);
+      w = w + (p.x * W - x);
+      h = h + overB;
+    }
+    return { ...p, px: x, py: y, pw: w, ph: h };
+  });
 }
 
-export function layoutPanels(id, W, H) {
-  const g = Math.max(6, Math.round(Math.min(W, H) * 0.008)); // panel gap
-  switch (id) {
-    case 'grid': {
-      // 3 x 2 grid; hero is the top-left double-wide panel.
-      const cw = (W - 2 * g) / 3, ch = (H - g) / 2;
-      return [
-        { ...r(W, H, 0, 0, 2 / 3, 0.5), hero: true, tag: 'LUCIA', slant: 0, photo: 0 },
-        { x: 2 * cw + 2 * g, y: 0, w: cw, h: ch, hero: false, tag: 'JASON', slant: 0, photo: 1 },
-        { x: 0, y: ch + g, w: cw, h: ch, hero: false, tag: 'OCEAN DR', slant: 0, photo: 2 },
-        { x: cw + g, y: ch + g, w: cw, h: ch, hero: false, tag: 'VICE CITY', slant: 0, photo: 3 },
-        { x: 2 * cw + 2 * g, y: ch + g, w: cw, h: ch, hero: false, tag: 'LEONIDA', slant: 0, photo: 4 },
-      ];
-    }
-    case 'portrait': {
-      // Hero across the top, 2 x 2 below. Built for the 1080x1350 size.
-      const cw = (W - g) / 2, ch = (H * 0.42 - 2 * g) / 2;
-      const hy = H * 0.58;
-      return [
-        { x: 0, y: 0, w: W, h: hy, hero: true, tag: 'LUCIA', slant: 0, photo: 0 },
-        { x: 0, y: hy + g, w: cw, h: ch, hero: false, tag: 'JASON', slant: 0, photo: 1 },
-        { x: cw + g, y: hy + g, w: cw, h: ch, hero: false, tag: 'NEON', slant: 0, photo: 2 },
-        { x: 0, y: hy + g + ch + g, w: cw, h: ch, hero: false, tag: 'OCEAN DR', slant: 0, photo: 3 },
-        { x: cw + g, y: hy + g + ch + g, w: cw, h: ch, hero: false, tag: 'LEONIDA', slant: 0, photo: 4 },
-      ];
-    }
-    case 'wide': {
-      // Hero dead centre, popped out over a 4-panel strip behind it.
-      const sw = (W - 3 * g) / 4, sh = H;
-      const hw = W * 0.46, hh = H * 0.86, hx = (W - hw) / 2, hy = (H - hh) / 2;
-      return [
-        { x: hx, y: hy, w: hw, h: hh, hero: true, tag: 'LUCIA', slant: 0, photo: 0 },
-        { x: 0, y: 0, w: sw, h: sh, hero: false, tag: 'JASON', slant: 0, photo: 1 },
-        { x: sw + g, y: 0, w: sw, h: sh, hero: false, tag: 'NEON', slant: 0, photo: 2 },
-        { x: 2 * sw + 2 * g, y: 0, w: sw, h: sh, hero: false, tag: 'OCEAN DR', slant: 0, photo: 3 },
-        { x: 3 * sw + 3 * g, y: 0, w: sw, h: sh, hero: false, tag: 'LEONIDA', slant: 0, photo: 4 },
-      ];
-    }
-    case 'slanted': {
-      // Five slanted panels (parallelogram clips), hero in the middle, widest.
-      const n = 5, cw = (W - (n - 1) * g) / n;
-      const tags = ['JASON', 'LUCIA', 'NEON', 'OCEAN DR', 'LEONIDA'];
-      const out = [];
-      for (let i = 0; i < n; i++) {
-        const hero = i === 2;
-        out.push({
-          x: i * (cw + g), y: hero ? 0 : H * 0.06, w: cw, h: hero ? H : H * 0.88,
-          hero, tag: tags[i], slant: 0.06, photo: i,
-        });
-      }
-      return out;
-    }
-    case 'nine': {
-      // Official-cover style: 3 x 3 collage, hero is the centre panel.
-      const cw = (W - 2 * g) / 3, ch = (H - 2 * g) / 3;
-      const tags = ['JASON', 'LUCIA', 'NEON', 'OCEAN DR', 'VICE CITY', 'LEONIDA', 'PALMS', 'STRIP', 'HEAT'];
-      const out = [];
-      for (let row = 0; row < 3; row++) {
-        for (let col = 0; col < 3; col++) {
-          const i = row * 3 + col;
-          out.push({
-            x: col * (cw + g), y: row * (ch + g), w: cw, h: ch,
-            hero: i === 4, tag: tags[i], slant: 0, photo: i % 6,
-          });
-        }
-      }
-      return out;
-    }
-    case 'hero-led':
-    default: {
-      // Default: big hero left, 2 x 2 stack right. Five different photos.
-      return heroLedPanels(W, H);
-    }
-  }
+export function heroPanel(layoutId) {
+  return layoutById(layoutId).panels.find((p) => p.hero);
 }
 
-// The hero-led default: big hero left, 2 x 2 stack right, five panels,
-// five different photos. Canonical geometry used by the cover shot.
-export function heroLedPanels(W, H) {
-  const g = Math.max(6, Math.round(Math.min(W, H) * 0.008));
-  const rx = W * 0.58 + g;
-  const rw = W - rx;
-  const rh = (H - g) / 2;
-  const cw = (rw - g) / 2;
-  return [
-    { x: 0, y: 0, w: W * 0.58, h: H, hero: true, tag: 'LUCIA', slant: 0, photo: 0 },
-    { x: rx, y: 0, w: cw, h: rh, hero: false, tag: 'JASON', slant: 0, photo: 1 },
-    { x: rx + cw + g, y: 0, w: cw, h: rh, hero: false, tag: 'NEON', slant: 0, photo: 2 },
-    { x: rx, y: rh + g, w: cw, h: rh, hero: false, tag: 'OCEAN DR', slant: 0, photo: 3 },
-    { x: rx + cw + g, y: rh + g, w: cw, h: rh, hero: false, tag: 'LEONIDA', slant: 0, photo: 4 },
-  ];
-}
-
-// Cover-fit source rect: crop `img` (iw x ih) to fill (w x h) anchored on a
-// focus point (0..1), with an optional zoom. Never crops through a face when
-// the focus point sits on it — the hero uses focusY 0.22 (upper third).
-export function coverFitRect(iw, ih, w, h, focusX, focusY, zoom = 1) {
-  const scale = Math.max(w / iw, h / ih) * zoom;
-  const sw = w / scale, sh = h / scale;
-  let sx = (iw - sw) * focusX;
-  let sy = (ih - sh) * focusY;
-  sx = Math.max(0, Math.min(iw - sw, sx));
-  sy = Math.max(0, Math.min(ih - sh, sy));
-  return { sx, sy, sw, sh };
-}
-
-// Title block geometry, computed BOTTOM-UP so the 5 stars can never be cut
-// off: stars sit on a row whose bottom edge is `bottomMargin` px above the
-// frame edge (>= 36px clear space, the carried star fix). Title sits above
-// the stars, subtitle above the title. Returns pixel geometry for W x H.
-export function titleBlockGeometry(W, H) {
-  const starSize = Math.max(18, Math.round(Math.min(W, H) * 0.026));
-  const bottomMargin = Math.max(40, Math.round(H * 0.045)); // >= 36px clear
-  const starsY = H - bottomMargin - starSize;
-  const gap = Math.round(starSize * 0.5);
-  const titleSize = Math.round(Math.min(W, H) * 0.115);
-  const titleY = starsY - gap - titleSize * 0.95; // baseline of title
-  const subSize = Math.round(Math.min(W, H) * 0.038);
-  const subY = titleY - titleSize * 1.02; // subtitle sits ABOVE the title's top, never inside it
+// The hero's face zone in poster pixels: the upper third of the hero panel,
+// where the face-aware crop always lands the face. The title block must stay
+// below this box in every layout and every size.
+export function heroFaceBox(layoutId, W, H) {
+  const rects = layoutPixelRects(layoutId, W, H);
+  const hero = rects.find((r) => r.hero);
   return {
-    starSize, bottomMargin, starsY, starsBottom: starsY + starSize,
-    clearBelow: H - (starsY + starSize),
-    titleSize, titleY, subSize, subY,
-    scrimTop: subY - subSize * 2.2,
+    x: hero.px + hero.pw * 0.3,
+    y: hero.py + hero.ph * 0.06,
+    w: hero.pw * 0.4,
+    h: hero.ph * 0.3,
   };
 }
 
-// Fit the title font size so `text` fits inside maxWidth at Anton.
-export function fitTitleSize(ctx, text, startSize, maxWidth) {
-  let size = startSize;
-  ctx.font = `${size}px Anton, sans-serif`;
-  while (size > 24 && ctx.measureText(text).width > maxWidth) {
-    size -= 2;
-    ctx.font = `${size}px Anton, sans-serif`;
-  }
-  return size;
-}
+export { GAP };

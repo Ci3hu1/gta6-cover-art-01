@@ -1,263 +1,419 @@
-// main.js — Leonida Nights Cover Studio: the 3-step studio flow.
-//   1 Add photos (6 bundled samples + upload your own, smart face-aware crops)
-//   2 Caption (title, subtitle, cast tags, title style, grade, finish)
-//   3 Export PNG in 3 sizes (1080x1080 / 1080x1350 / 1920x1080)
-// Fully offline: every asset is a file under app/. No network requests.
+// Leonida Nights Cover Studio v4 — studio UI.
+// Loads the vendored fonts + sample photos, runs the live preview, the
+// panel editor, undo/redo, "Surprise me" and the 3-size PNG export.
+// Everything runs offline: no network request is ever made.
 
-import { renderCover, exportCanvas, EXPORT_SIZES, SAMPLE_PHOTOS, defaultState } from './cover.js';
-import { GRADES, gradeById } from './grades.js';
-import { LAYOUTS, layoutPanels, layoutById } from './layouts.js';
-import { parseShotParams, drawCoverShot, drawLayoutsShot } from './shots.js';
+import { GRADES, DEFAULT_GRADE_ID } from './grades.js';
+import { LAYOUTS, DEFAULT_LAYOUT_ID } from './layouts.js';
+import { SAMPLES, FRAMES, EXPORT_SIZES, defaultState, renderPoster, resolvePanels } from './cover.js';
+import { handleShotMode } from './shots.js';
 
-const $ = (id) => document.getElementById(id);
-const PREVIEW_ASPECT = { 'hero-led': [1, 1], grid: [1, 1], nine: [1, 1], portrait: [4, 5], wide: [16, 9], slanted: [16, 9] };
-
-let state = defaultState();
-let photos = SAMPLE_PHOTOS.map((p) => ({ ...p, img: null }));
-let selectedPanel = 0;
+const state = defaultState();
+let exportSize = EXPORT_SIZES[0];
 let undoStack = [];
 let redoStack = [];
-let lastPanels = [];
-let previewW = 600, previewH = 600;
 
-function pushUndo() {
-  undoStack.push(JSON.stringify(state));
+const $ = (id) => document.getElementById(id);
+const preview = $('preview');
+
+function serializable() {
+  const { photos, ...rest } = state;
+  return JSON.stringify({ ...rest, photoCount: photos.length });
+}
+
+function pushHistory() {
+  undoStack.push(serializable());
   if (undoStack.length > 50) undoStack.shift();
   redoStack = [];
   updateUndoButtons();
 }
-function undo() {
-  if (!undoStack.length) return;
-  redoStack.push(JSON.stringify(state));
-  state = JSON.parse(undoStack.pop());
-  syncInputs();
-  render();
-  updateUndoButtons();
-}
-function redo() {
-  if (!redoStack.length) return;
-  undoStack.push(JSON.stringify(state));
-  state = JSON.parse(redoStack.pop());
-  syncInputs();
-  render();
-  updateUndoButtons();
-}
-function updateUndoButtons() {
-  $('undoBtn').disabled = !undoStack.length;
-  $('redoBtn').disabled = !redoStack.length;
+
+function applySnapshot(json) {
+  const s = JSON.parse(json);
+  const photos = state.photos;
+  Object.assign(state, s);
+  state.photos = photos;
 }
 
-function images() {
-  // photo index -> loaded image (or null while loading)
-  return photos.map((p) => p.img);
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(serializable());
+  applySnapshot(undoStack.pop());
+  syncControls();
+  render();
+  updateUndoButtons();
+}
+
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(serializable());
+  applySnapshot(redoStack.pop());
+  syncControls();
+  render();
+  updateUndoButtons();
+}
+
+function updateUndoButtons() {
+  $('undo-btn').disabled = !undoStack.length;
+  $('redo-btn').disabled = !redoStack.length;
+}
+
+async function loadFonts() {
+  const fonts = [
+    new FontFace('Anton', 'url(fonts/Anton-Regular.ttf)'),
+    new FontFace('Pacifico', 'url(fonts/Pacifico-Regular.ttf)'),
+  ];
+  for (const f of fonts) {
+    try {
+      await f.load();
+      document.fonts.add(f);
+    } catch (e) {
+      console.warn('font failed', f.family, e);
+    }
+  }
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+async function loadSamples() {
+  await Promise.all(state.photos.map(async (p) => {
+    p.img = await loadImage(p.src);
+  }));
 }
 
 function render() {
-  const canvas = $('preview');
-  const [aw, ah] = PREVIEW_ASPECT[state.layout] || [1, 1];
-  const maxSide = 600;
-  previewW = aw >= ah ? maxSide : Math.round(maxSide * aw / ah);
-  previewH = ah > aw ? maxSide : Math.round(maxSide * ah / aw);
-  canvas.width = previewW; canvas.height = previewH;
-  const ctx = canvas.getContext('2d');
-  renderCover(ctx, previewW, previewH, state, images());
-  lastPanels = layoutPanels(state.layout, previewW, previewH);
-  $('panelLabel').textContent = `Panel ${selectedPanel + 1} — ${state.panels[selectedPanel].tag || 'untagged'} · ${photos[state.panels[selectedPanel].photo]?.label || 'photo'}`;
-  $('layoutName').textContent = layoutById(state.layout).name;
-  $('gradeName').textContent = gradeById(state.grade).name;
+  renderPoster(preview, state, exportSize.w, exportSize.h);
+  buildPanelList();
 }
 
-function syncInputs() {
-  $('titleInput').value = state.title;
-  $('subtitleInput').value = state.subtitle;
-  $('tagInput').value = state.panels[selectedPanel].tag;
-  $('zoomRange').value = state.panels[selectedPanel].zoom;
-  $('panXRange').value = state.panels[selectedPanel].panX;
-  $('panYRange').value = state.panels[selectedPanel].panY;
-  $('flipBtn').textContent = state.panels[selectedPanel].flip ? 'Unflip' : 'Flip';
-  $('grainToggle').checked = state.grain;
-  $('vignetteToggle').checked = state.vignette;
-  document.querySelectorAll('#layoutRow button').forEach((b) => b.classList.toggle('active', b.dataset.id === state.layout));
-  document.querySelectorAll('#gradeRow button').forEach((b) => b.classList.toggle('active', b.dataset.id === state.grade));
+function renderOnly() {
+  renderPoster(preview, state, exportSize.w, exportSize.h);
 }
 
-function buildChips() {
-  const layoutRow = $('layoutRow');
-  layoutRow.innerHTML = '';
+// ---- controls --------------------------------------------------------------
+
+function buildLayoutButtons() {
+  const wrap = $('layout-btns');
+  wrap.innerHTML = '';
   for (const l of LAYOUTS) {
     const b = document.createElement('button');
-    b.type = 'button'; b.textContent = l.name; b.dataset.id = l.id;
-    b.onclick = () => { pushUndo(); state.layout = l.id; syncInputs(); render(); };
-    layoutRow.appendChild(b);
+    b.type = 'button';
+    b.className = 'layout-btn' + (l.id === state.layoutId ? ' active' : '');
+    b.textContent = l.name;
+    b.title = l.blurb;
+    b.addEventListener('click', () => {
+      pushHistory();
+      state.layoutId = l.id;
+      syncControls();
+      render();
+    });
+    wrap.appendChild(b);
   }
-  const gradeRow = $('gradeRow');
-  gradeRow.innerHTML = '';
+}
+
+function buildGradeSwatches() {
+  const wrap = $('grade-btns');
+  wrap.innerHTML = '';
   for (const g of GRADES) {
     const b = document.createElement('button');
-    b.type = 'button'; b.textContent = g.name; b.dataset.id = g.id;
-    b.onclick = () => { pushUndo(); state.grade = g.id; syncInputs(); render(); };
-    gradeRow.appendChild(b);
+    b.type = 'button';
+    b.className = 'grade-btn' + (g.id === state.gradeId ? ' active' : '');
+    b.style.background = `linear-gradient(135deg, rgb(${g.top[0]},${g.top[1]},${g.top[2]}) 0%, rgb(${g.bottom[0]},${g.bottom[1]},${g.bottom[2]}) 100%)`;
+    b.textContent = g.name;
+    b.title = g.name;
+    b.addEventListener('click', () => {
+      pushHistory();
+      state.gradeId = g.id;
+      syncControls();
+      render();
+    });
+    wrap.appendChild(b);
   }
-  const strip = $('photoStrip');
-  strip.innerHTML = '';
-  photos.forEach((p, i) => {
-    const d = document.createElement('div');
-    d.className = 'thumb';
-    d.title = p.label;
-    const im = document.createElement('img');
-    im.src = p.src; im.alt = p.label;
-    im.onclick = () => { pushUndo(); state.panels[selectedPanel].photo = i; syncInputs(); render(); };
-    d.appendChild(im);
-    const cap = document.createElement('span');
-    cap.textContent = p.label;
-    d.appendChild(cap);
-    strip.appendChild(d);
+}
+
+function buildFrameSelect() {
+  const sel = $('frame-select');
+  sel.innerHTML = '';
+  for (const f of FRAMES) {
+    const o = document.createElement('option');
+    o.value = f.id;
+    o.textContent = f.name;
+    sel.appendChild(o);
+  }
+  sel.value = state.frameId;
+  sel.addEventListener('change', () => {
+    pushHistory();
+    state.frameId = sel.value;
+    render();
   });
 }
 
-function exportPng(size) {
-  const canvas = exportCanvas(size.w, size.h, state, images());
-  canvas.toBlob((blob) => {
-    if (!blob) return;
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `leonida-nights-${size.id}.png`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-  }, 'image/png');
-}
-
-function surpriseMe() {
-  pushUndo();
-  state.layout = LAYOUTS[Math.floor(Math.random() * LAYOUTS.length)].id;
-  state.grade = GRADES[Math.floor(Math.random() * GRADES.length)].id;
-  const order = photos.map((_, i) => i).sort(() => Math.random() - 0.5);
-  state.panels.forEach((p, i) => { p.photo = order[i % order.length]; });
-  syncInputs(); render();
-}
-
-function loadAllPhotos() {
-  return Promise.all(photos.map((p) => new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => { p.img = img; resolve(); };
-    img.onerror = () => resolve();
-    img.src = p.src;
-  })));
-}
-
-function initStudio() {
-  buildChips();
-  syncInputs();
-
-  $('titleInput').addEventListener('input', (e) => { state.title = e.target.value.toUpperCase(); render(); });
-  $('titleInput').addEventListener('change', pushUndo);
-  $('subtitleInput').addEventListener('input', (e) => { state.subtitle = e.target.value; render(); });
-  $('subtitleInput').addEventListener('change', pushUndo);
-  $('tagInput').addEventListener('input', (e) => { state.panels[selectedPanel].tag = e.target.value.toUpperCase(); render(); });
-  $('tagInput').addEventListener('change', pushUndo);
-  $('zoomRange').addEventListener('input', (e) => { state.panels[selectedPanel].zoom = Number(e.target.value); render(); });
-  $('zoomRange').addEventListener('change', pushUndo);
-  $('panXRange').addEventListener('input', (e) => { state.panels[selectedPanel].panX = Number(e.target.value); render(); });
-  $('panXRange').addEventListener('change', pushUndo);
-  $('panYRange').addEventListener('input', (e) => { state.panels[selectedPanel].panY = Number(e.target.value); render(); });
-  $('panYRange').addEventListener('change', pushUndo);
-  $('flipBtn').onclick = () => { pushUndo(); state.panels[selectedPanel].flip = !state.panels[selectedPanel].flip; syncInputs(); render(); };
-  $('swapBtn').onclick = () => {
-    pushUndo();
-    const next = (selectedPanel + 1) % state.panels.length;
-    const a = state.panels[selectedPanel], b = state.panels[next];
-    [a.photo, b.photo] = [b.photo, a.photo];
-    [a.tag, b.tag] = [b.tag, a.tag];
-    syncInputs(); render();
-  };
-  $('undoBtn').onclick = undo;
-  $('redoBtn').onclick = redo;
-  $('surpriseBtn').onclick = surpriseMe;
-  $('autoBtn').onclick = () => {
-    pushUndo();
-    const i = LAYOUTS.findIndex((l) => l.id === state.layout);
-    state.layout = LAYOUTS[(i + 1) % LAYOUTS.length].id;
-    syncInputs(); render();
-  };
-  $('grainToggle').onchange = (e) => { pushUndo(); state.grain = e.target.checked; render(); };
-  $('vignetteToggle').onchange = (e) => { pushUndo(); state.vignette = e.target.checked; render(); };
-
-  $('preview').addEventListener('click', (e) => {
-    const rect = e.target.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (previewW / rect.width);
-    const y = (e.clientY - rect.top) * (previewH / rect.height);
-    const hit = lastPanels.findIndex((p) => x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h);
-    if (hit >= 0) { selectedPanel = hit; syncInputs(); render(); }
-  });
-
-  const exportRow = $('exportRow');
-  exportRow.innerHTML = '';
+function buildSizeButtons() {
+  const wrap = $('size-btns');
+  wrap.innerHTML = '';
   for (const s of EXPORT_SIZES) {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'export';
-    b.textContent = `PNG ${s.label}`;
-    b.onclick = () => exportPng(s);
-    exportRow.appendChild(b);
+    b.type = 'button';
+    b.className = 'size-btn' + (s.id === exportSize.id ? ' active' : '');
+    b.textContent = s.name;
+    b.addEventListener('click', () => {
+      exportSize = s;
+      syncControls();
+      render();
+    });
+    wrap.appendChild(b);
   }
+}
 
-  $('uploadInput').addEventListener('change', (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const img = new Image();
-      img.onload = () => {
-        pushUndo();
-        photos.push({ id: `up${photos.length}`, file: '', label: file.name.replace(/\.[^.]+$/, '').slice(0, 18) || 'Uploaded', src: reader.result, img });
-        state.panels[selectedPanel].photo = photos.length - 1;
-        buildChips(); syncInputs(); render();
-      };
-      img.src = reader.result;
-    };
-    reader.readAsDataURL(file);
+function photoOptions(select, current) {
+  select.innerHTML = '';
+  state.photos.forEach((p, i) => {
+    const o = document.createElement('option');
+    o.value = String(i);
+    o.textContent = `${p.role} — ${p.location}`;
+    select.appendChild(o);
   });
+  select.value = String(current);
+}
 
+function buildPanelList() {
+  const wrap = $('panel-list');
+  const resolved = resolvePanels(state);
+  const focusId = document.activeElement?.dataset?.panel;
+  wrap.innerHTML = '';
+  resolved.forEach((r, idx) => {
+    const row = document.createElement('div');
+    row.className = 'panel-row';
+    const title = document.createElement('div');
+    title.className = 'panel-title';
+    title.textContent = `${r.panel.hero ? '★ ' : ''}Panel ${idx + 1}${r.panel.hero ? ' (Hero)' : ''}`;
+    row.appendChild(title);
+
+    const sel = document.createElement('select');
+    sel.dataset.panel = r.panel.id;
+    photoOptions(sel, state.photos.indexOf(r.photo));
+    sel.addEventListener('change', () => {
+      pushHistory();
+      state.overrides[r.panel.id] = { ...(state.overrides[r.panel.id] || {}), photo: Number(sel.value) };
+      render();
+    });
+    row.appendChild(labeled('Photo', sel));
+
+    const zoom = document.createElement('input');
+    zoom.type = 'range'; zoom.min = '1'; zoom.max = '2'; zoom.step = '0.05';
+    zoom.value = String(r.zoom); zoom.dataset.panel = r.panel.id;
+    zoom.addEventListener('input', () => {
+      state.overrides[r.panel.id] = { ...(state.overrides[r.panel.id] || {}), zoom: Number(zoom.value) };
+      renderOnly();
+    });
+    zoom.addEventListener('change', pushHistory);
+    row.appendChild(labeled('Zoom', zoom));
+
+    const panX = document.createElement('input');
+    panX.type = 'range'; panX.min = '-1'; panX.max = '1'; panX.step = '0.05';
+    panX.value = String(r.panX); panX.dataset.panel = r.panel.id;
+    panX.addEventListener('input', () => {
+      state.overrides[r.panel.id] = { ...(state.overrides[r.panel.id] || {}), panX: Number(panX.value) };
+      renderOnly();
+    });
+    panX.addEventListener('change', pushHistory);
+    row.appendChild(labeled('Pan ↔', panX));
+
+    const panY = document.createElement('input');
+    panY.type = 'range'; panY.min = '-1'; panY.max = '1'; panY.step = '0.05';
+    panY.value = String(r.panY); panY.dataset.panel = r.panel.id;
+    panY.addEventListener('input', () => {
+      state.overrides[r.panel.id] = { ...(state.overrides[r.panel.id] || {}), panY: Number(panY.value) };
+      renderOnly();
+    });
+    panY.addEventListener('change', pushHistory);
+    row.appendChild(labeled('Pan ↕', panY));
+
+    const flip = document.createElement('button');
+    flip.type = 'button';
+    flip.textContent = r.flip ? 'Unflip' : 'Flip';
+    flip.addEventListener('click', () => {
+      pushHistory();
+      state.overrides[r.panel.id] = { ...(state.overrides[r.panel.id] || {}), flip: !r.flip };
+      render();
+    });
+    row.appendChild(flip);
+
+    const role = document.createElement('input');
+    role.type = 'text'; role.value = r.role; role.maxLength = 24;
+    role.addEventListener('change', () => {
+      pushHistory();
+      state.overrides[r.panel.id] = { ...(state.overrides[r.panel.id] || {}), role: role.value.toUpperCase() || r.role };
+      render();
+    });
+    row.appendChild(labeled('Role tag', role));
+
+    const loc = document.createElement('input');
+    loc.type = 'text'; loc.value = r.location; loc.maxLength = 32;
+    loc.addEventListener('change', () => {
+      pushHistory();
+      state.overrides[r.panel.id] = { ...(state.overrides[r.panel.id] || {}), location: loc.value || r.location };
+      render();
+    });
+    row.appendChild(labeled('Place / time', loc));
+
+    wrap.appendChild(row);
+  });
+  if (focusId) {
+    const el = wrap.querySelector(`[data-panel="${focusId}"]`);
+    if (el) el.focus();
+  }
+}
+
+function labeled(label, el) {
+  const wrap = document.createElement('label');
+  wrap.className = 'field';
+  const span = document.createElement('span');
+  span.textContent = label;
+  wrap.appendChild(span);
+  wrap.appendChild(el);
+  return wrap;
+}
+
+function syncControls() {
+  $('title-input').value = state.title;
+  $('subtitle-input').value = state.subtitle;
+  $('tagline-input').value = state.tagline;
+  $('ink-toggle').checked = state.posterInk;
+  $('grain-toggle').checked = state.grain;
+  $('vignette-toggle').checked = state.vignette;
+  $('frame-select').value = state.frameId;
+  buildLayoutButtons();
+  buildGradeSwatches();
+  buildSizeButtons();
+}
+
+function bindControls() {
+  $('title-input').addEventListener('change', (e) => {
+    pushHistory();
+    state.title = e.target.value.toUpperCase() || 'LEONIDA NIGHTS';
+    render();
+  });
+  $('subtitle-input').addEventListener('change', (e) => {
+    pushHistory();
+    state.subtitle = e.target.value || 'Vice City Nights';
+    render();
+  });
+  $('tagline-input').addEventListener('change', (e) => {
+    pushHistory();
+    state.tagline = e.target.value.toUpperCase() || state.tagline;
+    render();
+  });
+  $('ink-toggle').addEventListener('change', (e) => {
+    pushHistory();
+    state.posterInk = e.target.checked;
+    render();
+  });
+  $('grain-toggle').addEventListener('change', (e) => {
+    pushHistory();
+    state.grain = e.target.checked;
+    render();
+  });
+  $('vignette-toggle').addEventListener('change', (e) => {
+    pushHistory();
+    state.vignette = e.target.checked;
+    render();
+  });
+  $('undo-btn').addEventListener('click', undo);
+  $('redo-btn').addEventListener('click', redo);
+  $('surprise-btn').addEventListener('click', () => {
+    pushHistory();
+    const layouts = LAYOUTS.filter((l) => l.id !== state.layoutId);
+    state.layoutId = layouts[Math.floor(Math.random() * layouts.length)].id;
+    const grades = GRADES.filter((g) => g.id !== state.gradeId);
+    state.gradeId = grades[Math.floor(Math.random() * grades.length)].id;
+    // Shuffle the photo order across panels.
+    const order = state.photos.map((_, i) => i).sort(() => Math.random() - 0.5);
+    const layout = LAYOUTS.find((l) => l.id === state.layoutId);
+    layout.panels.forEach((p, i) => {
+      state.overrides[p.id] = { ...(state.overrides[p.id] || {}), photo: order[i % order.length] };
+    });
+    syncControls();
+    render();
+  });
+  $('auto-btn').addEventListener('click', () => {
+    pushHistory();
+    // Auto layout: pick the layout whose hero best fits the hero photo's
+    // aspect (tall photo → tall hero, wide photo → wide hero).
+    const hero = state.photos[0].img;
+    const ratio = hero ? hero.naturalWidth / hero.naturalHeight : 1.33;
+    state.layoutId = ratio > 1.4 ? 'wide-hero' : ratio < 1 ? 'portrait' : 'popout';
+    syncControls();
+    render();
+  });
+  $('export-btn').addEventListener('click', () => exportPNG(exportSize));
+  $('export-all-btn').addEventListener('click', () => {
+    for (const s of EXPORT_SIZES) exportPNG(s);
+  });
+  $('add-photos').addEventListener('change', async (e) => {
+    const files = [...e.target.files];
+    for (const f of files) {
+      const url = URL.createObjectURL(f);
+      try {
+        const img = await loadImage(url);
+        state.photos.push({
+          src: url,
+          role: 'THE NEWCOMER',
+          location: 'Leonida 6:00 PM',
+          fx: 0.5, fy: 0.35,
+          img,
+        });
+      } catch (err) {
+        console.warn('photo failed', f.name, err);
+      }
+    }
+    e.target.value = '';
+    render();
+  });
+}
+
+async function exportPNG(size) {
+  const off = document.createElement('canvas');
+  renderPoster(off, state, size.w, size.h);
+  const blob = await new Promise((res) => off.toBlob(res, 'image/png'));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `leonida-nights-${size.id}-${size.w}x${size.h}.png`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// ---- boot ------------------------------------------------------------------
+
+async function boot() {
+  buildLayoutButtons();
+  buildGradeSwatches();
+  buildFrameSelect();
+  buildSizeButtons();
+  bindControls();
   updateUndoButtons();
-  render();
-}
-
-// Screenshot scenes: ?shot=cover | portrait | layouts renders the scene
-// full-window and skips the studio chrome.
-async function initShot(params) {
-  document.body.classList.add('shot');
-  const canvas = $('shotCanvas');
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-  await loadAllPhotos();
-  try {
-    await document.fonts.load('40px Anton');
-    await document.fonts.load('40px Pacifico');
-    await document.fonts.ready;
-  } catch { /* fonts fall back; render anyway */ }
-  const ctx = canvas.getContext('2d');
-  if (params.mode === 'layouts') drawLayoutsShot(ctx, canvas.width, canvas.height, params, images());
-  else drawCoverShot(ctx, canvas.width, canvas.height, params, images());
-  document.title = `shot:${params.mode}`;
-}
-
-async function init() {
-  const params = parseShotParams(window.location.search);
-  if (params && params.mode !== 'editor') {
-    await initShot(params);
+  await loadFonts();
+  await loadSamples();
+  const shot = handleShotMode(state, preview, exportPNG);
+  if (shot) {
+    // Shot scenes render themselves; mark ready for the screenshot runner.
+    document.body.dataset.ready = '1';
     return;
   }
-  if (params && params.mode === 'editor') {
-    state.title = params.title;
-    state.subtitle = params.subtitle;
-  }
-  await loadAllPhotos();
-  try {
-    await document.fonts.load('40px Anton');
-    await document.fonts.load('40px Pacifico');
-    await document.fonts.ready;
-  } catch { /* render anyway */ }
-  initStudio();
+  syncControls();
   render();
+  document.body.dataset.ready = '1';
 }
 
-init();
+boot().catch((err) => {
+  console.error(err);
+  document.body.dataset.ready = 'error';
+  document.body.dataset.error = String(err);
+});
