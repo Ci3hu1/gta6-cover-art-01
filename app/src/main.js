@@ -1,265 +1,263 @@
-// main.js — the Palm Heat Cover Studio editor.
-// Wires the controls to the cover renderer: caption, grade, layout,
-// export size, per-panel photo + crop, undo/redo, PNG export.
-// Fully offline: every asset is a file under app/.
+// main.js — Leonida Nights Cover Studio: the 3-step studio flow.
+//   1 Add photos (6 bundled samples + upload your own, smart face-aware crops)
+//   2 Caption (title, subtitle, cast tags, title style, grade, finish)
+//   3 Export PNG in 3 sizes (1080x1080 / 1080x1350 / 1920x1080)
+// Fully offline: every asset is a file under app/. No network requests.
 
+import { renderCover, exportCanvas, EXPORT_SIZES, SAMPLE_PHOTOS, defaultState } from './cover.js';
 import { GRADES, gradeById } from './grades.js';
-import { LAYOUTS, SAMPLES, sampleFile } from './layouts.js';
-import { renderCover, loadImage } from './cover.js';
-
-export const SIZES = {
-  '1080x1080': { w: 1080, h: 1080, label: 'Square 1080 × 1080' },
-  '1080x1350': { w: 1080, h: 1350, label: 'Portrait 1080 × 1350' },
-  '1920x1080': { w: 1920, h: 1080, label: 'Wide 1920 × 1080' },
-};
-
-export function defaultState() {
-  return {
-    caption: 'PALM HEAT',
-    subtitle: 'Vice City Nights',
-    grade: 'vice-sunset',
-    layout: 'hero',
-    size: '1080x1080',
-    panelPhotos: ['boulevard', 'skyline', 'crowd', 'car', 'pier'],
-    panelFocus: [
-      { fx: 0.5, fy: 0.3, zoom: 1.05 },
-      { fx: 0.5, fy: 0.78, zoom: 1.7 },
-      { fx: 0.5, fy: 0.4, zoom: 1.05 },
-      { fx: 0.5, fy: 0.5, zoom: 1.05 },
-      { fx: 0.5, fy: 0.35, zoom: 1.05 },
-    ],
-  };
-}
+import { LAYOUTS, layoutPanels, layoutById } from './layouts.js';
+import { parseShotParams, drawCoverShot, drawLayoutsShot } from './shots.js';
 
 const $ = (id) => document.getElementById(id);
+const PREVIEW_ASPECT = { 'hero-led': [1, 1], grid: [1, 1], nine: [1, 1], portrait: [4, 5], wide: [16, 9], slanted: [16, 9] };
 
 let state = defaultState();
-let images = new Map();
-let history = [];
-let future = [];
-let rendering = false;
-let queued = false;
+let photos = SAMPLE_PHOTOS.map((p) => ({ ...p, img: null }));
+let selectedPanel = 0;
+let undoStack = [];
+let redoStack = [];
+let lastPanels = [];
+let previewW = 600, previewH = 600;
 
-function snapshot() {
-  return JSON.stringify(state);
-}
-
-function pushHistory() {
-  history.push(snapshot());
-  if (history.length > 50) history.shift();
-  future = [];
+function pushUndo() {
+  undoStack.push(JSON.stringify(state));
+  if (undoStack.length > 50) undoStack.shift();
+  redoStack = [];
   updateUndoButtons();
 }
-
+function undo() {
+  if (!undoStack.length) return;
+  redoStack.push(JSON.stringify(state));
+  state = JSON.parse(undoStack.pop());
+  syncInputs();
+  render();
+  updateUndoButtons();
+}
+function redo() {
+  if (!redoStack.length) return;
+  undoStack.push(JSON.stringify(state));
+  state = JSON.parse(redoStack.pop());
+  syncInputs();
+  render();
+  updateUndoButtons();
+}
 function updateUndoButtons() {
-  $('undoBtn').disabled = history.length === 0;
-  $('redoBtn').disabled = future.length === 0;
+  $('undoBtn').disabled = !undoStack.length;
+  $('redoBtn').disabled = !redoStack.length;
 }
 
-export async function loadFonts() {
-  const faces = [
-    new FontFace('Anton', "url('fonts/Anton-Regular.ttf')"),
-    new FontFace('Pacifico', "url('fonts/Pacifico-Regular.ttf')"),
-  ];
-  for (const f of faces) {
-    try {
-      await f.load();
-      document.fonts.add(f);
-    } catch (e) {
-      console.warn('font failed', e);
-    }
-  }
-  await document.fonts.ready;
+function images() {
+  // photo index -> loaded image (or null while loading)
+  return photos.map((p) => p.img);
 }
 
-async function ensureImages() {
-  const needed = new Set(state.panelPhotos);
-  for (const id of needed) {
-    if (!images.has(id)) {
-      images.set(id, await loadImage(sampleFile(id)));
-    }
-  }
+function render() {
+  const canvas = $('preview');
+  const [aw, ah] = PREVIEW_ASPECT[state.layout] || [1, 1];
+  const maxSide = 600;
+  previewW = aw >= ah ? maxSide : Math.round(maxSide * aw / ah);
+  previewH = ah > aw ? maxSide : Math.round(maxSide * ah / aw);
+  canvas.width = previewW; canvas.height = previewH;
+  const ctx = canvas.getContext('2d');
+  renderCover(ctx, previewW, previewH, state, images());
+  lastPanels = layoutPanels(state.layout, previewW, previewH);
+  $('panelLabel').textContent = `Panel ${selectedPanel + 1} — ${state.panels[selectedPanel].tag || 'untagged'} · ${photos[state.panels[selectedPanel].photo]?.label || 'photo'}`;
+  $('layoutName').textContent = layoutById(state.layout).name;
+  $('gradeName').textContent = gradeById(state.grade).name;
 }
 
-async function render() {
-  if (rendering) {
-    queued = true;
-    return;
-  }
-  rendering = true;
-  try {
-    await ensureImages();
-    const canvas = $('preview');
-    const size = SIZES[state.size];
-    const scale = Math.min(1, 640 / Math.max(size.w, size.h));
-    canvas.width = Math.round(size.w * scale);
-    canvas.height = Math.round(size.h * scale);
-    await renderCover(canvas.getContext('2d'), canvas.width, canvas.height, {
-      layout: state.layout,
-      grade: state.grade,
-      caption: state.caption,
-      subtitle: state.subtitle,
-      images,
-      panelPhotos: state.panelPhotos,
-      panelFocus: state.panelFocus,
-    });
-    $('sizeLabel').textContent = `${SIZES[state.size].label} · ${gradeById(state.grade).name}`;
-  } finally {
-    rendering = false;
-    if (queued) {
-      queued = false;
-      render();
-    }
-  }
-}
-
-function buildPanelControls() {
-  const wrap = $('panels');
-  wrap.innerHTML = '';
-  const layout = LAYOUTS[state.layout] || LAYOUTS.hero;
-  layout.panels.forEach((panel, i) => {
-    const photo = state.panelPhotos[i] || panel.photo;
-    const focus = state.panelFocus[i] || { fx: panel.fx, fy: panel.fy, zoom: panel.zoom };
-    const div = document.createElement('div');
-    div.className = 'panel-card';
-    div.innerHTML = `
-      <div class="panel-head">Panel ${i + 1} · ${photo}</div>
-      <label>Photo
-        <select data-panel="${i}" data-field="photo">
-          ${SAMPLES.map((s) => `<option value="${s.id}" ${s.id === photo ? 'selected' : ''}>${s.label}</option>`).join('')}
-        </select>
-      </label>
-      <label>Focus X <input type="range" min="0" max="100" value="${Math.round(focus.fx * 100)}" data-panel="${i}" data-field="fx"></label>
-      <label>Focus Y <input type="range" min="0" max="100" value="${Math.round(focus.fy * 100)}" data-panel="${i}" data-field="fy"></label>
-      <label>Zoom <input type="range" min="100" max="180" value="${Math.round(focus.zoom * 100)}" data-panel="${i}" data-field="zoom"></label>`;
-    wrap.appendChild(div);
-  });
-  wrap.querySelectorAll('select, input').forEach((el) => {
-    el.addEventListener('change', () => {
-      pushHistory();
-      const i = Number(el.dataset.panel);
-      const field = el.dataset.field;
-      if (field === 'photo') state.panelPhotos[i] = el.value;
-      else if (field === 'fx') state.panelFocus[i].fx = Number(el.value) / 100;
-      else if (field === 'fy') state.panelFocus[i].fy = Number(el.value) / 100;
-      else if (field === 'zoom') state.panelFocus[i].zoom = Number(el.value) / 100;
-      buildPanelControls();
-      render();
-    });
-  });
-}
-
-function syncLayoutPanels() {
-  const layout = LAYOUTS[state.layout] || LAYOUTS.hero;
-  state.panelPhotos = layout.panels.map((p) => p.photo);
-  state.panelFocus = layout.panels.map((p) => ({ fx: p.fx, fy: p.fy, zoom: p.zoom }));
-}
-
-async function exportPng() {
-  const size = SIZES[state.size];
-  await ensureImages();
-  const canvas = document.createElement('canvas');
-  canvas.width = size.w;
-  canvas.height = size.h;
-  await renderCover(canvas.getContext('2d'), size.w, size.h, {
-    layout: state.layout,
-    grade: state.grade,
-    caption: state.caption,
-    subtitle: state.subtitle,
-    images,
-    panelPhotos: state.panelPhotos,
-    panelFocus: state.panelFocus,
-  });
-  const blob = await new Promise((res) => canvas.toBlob(res, 'image/png'));
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `palm-heat-${state.size}.png`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-}
-
-export async function initEditor() {
-  // Controls
-  $('captionInput').value = state.caption;
+function syncInputs() {
+  $('titleInput').value = state.title;
   $('subtitleInput').value = state.subtitle;
-  $('gradeSelect').innerHTML = GRADES.map((g) => `<option value="${g.id}">${g.name}</option>`).join('');
-  $('gradeSelect').value = state.grade;
-  $('layoutSelect').innerHTML = Object.values(LAYOUTS)
-    .map((l) => `<option value="${l.id}">${l.name}</option>`)
-    .join('');
-  $('layoutSelect').value = state.layout;
-  $('sizeSelect').innerHTML = Object.entries(SIZES)
-    .map(([id, s]) => `<option value="${id}">${s.label}</option>`)
-    .join('');
-  $('sizeSelect').value = state.size;
+  $('tagInput').value = state.panels[selectedPanel].tag;
+  $('zoomRange').value = state.panels[selectedPanel].zoom;
+  $('panXRange').value = state.panels[selectedPanel].panX;
+  $('panYRange').value = state.panels[selectedPanel].panY;
+  $('flipBtn').textContent = state.panels[selectedPanel].flip ? 'Unflip' : 'Flip';
+  $('grainToggle').checked = state.grain;
+  $('vignetteToggle').checked = state.vignette;
+  document.querySelectorAll('#layoutRow button').forEach((b) => b.classList.toggle('active', b.dataset.id === state.layout));
+  document.querySelectorAll('#gradeRow button').forEach((b) => b.classList.toggle('active', b.dataset.id === state.grade));
+}
 
-  $('captionInput').addEventListener('input', (e) => {
-    state.caption = e.target.value.toUpperCase() || 'PALM HEAT';
-    render();
+function buildChips() {
+  const layoutRow = $('layoutRow');
+  layoutRow.innerHTML = '';
+  for (const l of LAYOUTS) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = l.name; b.dataset.id = l.id;
+    b.onclick = () => { pushUndo(); state.layout = l.id; syncInputs(); render(); };
+    layoutRow.appendChild(b);
+  }
+  const gradeRow = $('gradeRow');
+  gradeRow.innerHTML = '';
+  for (const g of GRADES) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = g.name; b.dataset.id = g.id;
+    b.onclick = () => { pushUndo(); state.grade = g.id; syncInputs(); render(); };
+    gradeRow.appendChild(b);
+  }
+  const strip = $('photoStrip');
+  strip.innerHTML = '';
+  photos.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'thumb';
+    d.title = p.label;
+    const im = document.createElement('img');
+    im.src = p.src; im.alt = p.label;
+    im.onclick = () => { pushUndo(); state.panels[selectedPanel].photo = i; syncInputs(); render(); };
+    d.appendChild(im);
+    const cap = document.createElement('span');
+    cap.textContent = p.label;
+    d.appendChild(cap);
+    strip.appendChild(d);
   });
-  $('subtitleInput').addEventListener('input', (e) => {
-    state.subtitle = e.target.value || 'Vice City Nights';
-    render();
+}
+
+function exportPng(size) {
+  const canvas = exportCanvas(size.w, size.h, state, images());
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `leonida-nights-${size.id}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  }, 'image/png');
+}
+
+function surpriseMe() {
+  pushUndo();
+  state.layout = LAYOUTS[Math.floor(Math.random() * LAYOUTS.length)].id;
+  state.grade = GRADES[Math.floor(Math.random() * GRADES.length)].id;
+  const order = photos.map((_, i) => i).sort(() => Math.random() - 0.5);
+  state.panels.forEach((p, i) => { p.photo = order[i % order.length]; });
+  syncInputs(); render();
+}
+
+function loadAllPhotos() {
+  return Promise.all(photos.map((p) => new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => { p.img = img; resolve(); };
+    img.onerror = () => resolve();
+    img.src = p.src;
+  })));
+}
+
+function initStudio() {
+  buildChips();
+  syncInputs();
+
+  $('titleInput').addEventListener('input', (e) => { state.title = e.target.value.toUpperCase(); render(); });
+  $('titleInput').addEventListener('change', pushUndo);
+  $('subtitleInput').addEventListener('input', (e) => { state.subtitle = e.target.value; render(); });
+  $('subtitleInput').addEventListener('change', pushUndo);
+  $('tagInput').addEventListener('input', (e) => { state.panels[selectedPanel].tag = e.target.value.toUpperCase(); render(); });
+  $('tagInput').addEventListener('change', pushUndo);
+  $('zoomRange').addEventListener('input', (e) => { state.panels[selectedPanel].zoom = Number(e.target.value); render(); });
+  $('zoomRange').addEventListener('change', pushUndo);
+  $('panXRange').addEventListener('input', (e) => { state.panels[selectedPanel].panX = Number(e.target.value); render(); });
+  $('panXRange').addEventListener('change', pushUndo);
+  $('panYRange').addEventListener('input', (e) => { state.panels[selectedPanel].panY = Number(e.target.value); render(); });
+  $('panYRange').addEventListener('change', pushUndo);
+  $('flipBtn').onclick = () => { pushUndo(); state.panels[selectedPanel].flip = !state.panels[selectedPanel].flip; syncInputs(); render(); };
+  $('swapBtn').onclick = () => {
+    pushUndo();
+    const next = (selectedPanel + 1) % state.panels.length;
+    const a = state.panels[selectedPanel], b = state.panels[next];
+    [a.photo, b.photo] = [b.photo, a.photo];
+    [a.tag, b.tag] = [b.tag, a.tag];
+    syncInputs(); render();
+  };
+  $('undoBtn').onclick = undo;
+  $('redoBtn').onclick = redo;
+  $('surpriseBtn').onclick = surpriseMe;
+  $('autoBtn').onclick = () => {
+    pushUndo();
+    const i = LAYOUTS.findIndex((l) => l.id === state.layout);
+    state.layout = LAYOUTS[(i + 1) % LAYOUTS.length].id;
+    syncInputs(); render();
+  };
+  $('grainToggle').onchange = (e) => { pushUndo(); state.grain = e.target.checked; render(); };
+  $('vignetteToggle').onchange = (e) => { pushUndo(); state.vignette = e.target.checked; render(); };
+
+  $('preview').addEventListener('click', (e) => {
+    const rect = e.target.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (previewW / rect.width);
+    const y = (e.clientY - rect.top) * (previewH / rect.height);
+    const hit = lastPanels.findIndex((p) => x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h);
+    if (hit >= 0) { selectedPanel = hit; syncInputs(); render(); }
   });
-  $('gradeSelect').addEventListener('change', (e) => {
-    pushHistory();
-    state.grade = e.target.value;
-    render();
-  });
-  $('layoutSelect').addEventListener('change', (e) => {
-    pushHistory();
-    state.layout = e.target.value;
-    syncLayoutPanels();
-    buildPanelControls();
-    render();
-  });
-  $('sizeSelect').addEventListener('change', (e) => {
-    pushHistory();
-    state.size = e.target.value;
-    render();
-  });
-  $('exportBtn').addEventListener('click', exportPng);
-  $('undoBtn').addEventListener('click', () => {
-    if (!history.length) return;
-    future.push(snapshot());
-    state = JSON.parse(history.pop());
-    syncControls();
-    updateUndoButtons();
-    render();
-  });
-  $('redoBtn').addEventListener('click', () => {
-    if (!future.length) return;
-    history.push(snapshot());
-    state = JSON.parse(future.pop());
-    syncControls();
-    updateUndoButtons();
-    render();
-  });
-  $('uploadInput').addEventListener('change', async (e) => {
+
+  const exportRow = $('exportRow');
+  exportRow.innerHTML = '';
+  for (const s of EXPORT_SIZES) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'export';
+    b.textContent = `PNG ${s.label}`;
+    b.onclick = () => exportPng(s);
+    exportRow.appendChild(b);
+  }
+
+  $('uploadInput').addEventListener('change', (e) => {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const img = await loadImage(url);
-    const id = 'upload-' + Date.now();
-    images.set(id, img);
-    pushHistory();
-    state.panelPhotos[0] = id;
-    buildPanelControls();
-    render();
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        pushUndo();
+        photos.push({ id: `up${photos.length}`, file: '', label: file.name.replace(/\.[^.]+$/, '').slice(0, 18) || 'Uploaded', src: reader.result, img });
+        state.panels[selectedPanel].photo = photos.length - 1;
+        buildChips(); syncInputs(); render();
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
   });
 
-  buildPanelControls();
   updateUndoButtons();
-  await loadFonts();
-  await render();
-  window.__editorReady = true;
+  render();
 }
 
-function syncControls() {
-  $('captionInput').value = state.caption;
-  $('subtitleInput').value = state.subtitle;
-  $('gradeSelect').value = state.grade;
-  $('layoutSelect').value = state.layout;
-  $('sizeSelect').value = state.size;
-  buildPanelControls();
+// Screenshot scenes: ?shot=cover | portrait | layouts renders the scene
+// full-window and skips the studio chrome.
+async function initShot(params) {
+  document.body.classList.add('shot');
+  const canvas = $('shotCanvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  await loadAllPhotos();
+  try {
+    await document.fonts.load('40px Anton');
+    await document.fonts.load('40px Pacifico');
+    await document.fonts.ready;
+  } catch { /* fonts fall back; render anyway */ }
+  const ctx = canvas.getContext('2d');
+  if (params.mode === 'layouts') drawLayoutsShot(ctx, canvas.width, canvas.height, params, images());
+  else drawCoverShot(ctx, canvas.width, canvas.height, params, images());
+  document.title = `shot:${params.mode}`;
 }
+
+async function init() {
+  const params = parseShotParams(window.location.search);
+  if (params && params.mode !== 'editor') {
+    await initShot(params);
+    return;
+  }
+  if (params && params.mode === 'editor') {
+    state.title = params.title;
+    state.subtitle = params.subtitle;
+  }
+  await loadAllPhotos();
+  try {
+    await document.fonts.load('40px Anton');
+    await document.fonts.load('40px Pacifico');
+    await document.fonts.ready;
+  } catch { /* render anyway */ }
+  initStudio();
+  render();
+}
+
+init();

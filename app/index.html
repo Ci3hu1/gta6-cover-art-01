@@ -1,61 +1,75 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Palm Heat Cover Studio — GTA 6-style cover maker</title>
+<title>Leonida Nights — GTA 6 Cover Studio</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="topbar">
-  <h1>PALM HEAT <span>Cover Studio</span></h1>
-  <p class="tagline">Turn any photo into GTA 6-style cover art — offline, in your browser.</p>
+  <div class="brand"><span class="logo">LEONIDA NIGHTS</span><span class="sub">Cover Studio</span></div>
+  <div class="top-actions">
+    <button id="undoBtn" type="button">Undo</button>
+    <button id="redoBtn" type="button">Redo</button>
+    <button id="surpriseBtn" type="button" class="accent">Surprise me</button>
+    <button id="autoBtn" type="button">Auto layout</button>
+  </div>
 </header>
 
-<main id="editor" class="editor">
-  <section class="controls">
-    <div class="control-row">
-      <label>Caption
-        <input id="captionInput" type="text" value="PALM HEAT" maxlength="24">
-      </label>
-      <label>Subtitle
-        <input id="subtitleInput" type="text" value="Vice City Nights" maxlength="40">
-      </label>
-    </div>
-    <div class="control-row">
-      <label>Grade
-        <select id="gradeSelect"></select>
-      </label>
-      <label>Layout
-        <select id="layoutSelect"></select>
-      </label>
-      <label>Export size
-        <select id="sizeSelect"></select>
-      </label>
-    </div>
-    <div class="control-row buttons">
-      <button id="undoBtn" type="button">↩ Undo</button>
-      <button id="redoBtn" type="button">↪ Redo</button>
-      <button id="exportBtn" type="button" class="primary">⬇ Export PNG</button>
-      <label class="upload">＋ Add your photo
-        <input id="uploadInput" type="file" accept="image/*" hidden>
-      </label>
-    </div>
-    <p class="hint">Pick a panel below to change its photo, focus and zoom. Everything stays on your machine — no uploads, no network.</p>
-    <div id="panels" class="panels"></div>
+<main class="studio">
+  <section class="preview-col">
+    <canvas id="preview" width="600" height="600" aria-label="Cover preview"></canvas>
+    <p class="hint">Click a panel to select it, then crop and tag it below. The hero pops out of the grid — its face is never cropped.</p>
+    <p id="panelLabel" class="panel-label">Panel 1 — LUCIA</p>
   </section>
 
-  <section class="stage">
-    <canvas id="preview" width="640" height="640" aria-label="Cover preview"></canvas>
-    <p id="sizeLabel" class="size-label"></p>
+  <section class="controls-col">
+    <div class="step">
+      <h2>1 · Add photos</h2>
+      <p class="step-note">Tap a photo to put it in the selected panel, or upload your own. Photos never leave your machine.</p>
+      <div id="photoStrip" class="photo-strip"></div>
+      <label class="upload">Upload a photo
+        <input id="uploadInput" type="file" accept="image/*">
+      </label>
+    </div>
+
+    <div class="step">
+      <h2>2 · Caption</h2>
+      <label>Title <input id="titleInput" type="text" value="LEONIDA NIGHTS" maxlength="24"></label>
+      <label>Subtitle <input id="subtitleInput" type="text" value="Vice City Nights" maxlength="40"></label>
+      <label>Cast tag for this panel <input id="tagInput" type="text" value="LUCIA" maxlength="12"></label>
+      <div class="row">
+        <span class="lbl">Layout · <b id="layoutName">Hero Led</b></span>
+        <div id="layoutRow" class="chips"></div>
+      </div>
+      <div class="row">
+        <span class="lbl">Grade · <b id="gradeName">Vice Sunset</b></span>
+        <div id="gradeRow" class="chips"></div>
+      </div>
+      <div class="row sliders">
+        <label>Zoom <input id="zoomRange" type="range" min="1" max="2.5" step="0.05" value="1"></label>
+        <label>Pan X <input id="panXRange" type="range" min="-0.4" max="0.4" step="0.02" value="0"></label>
+        <label>Pan Y <input id="panYRange" type="range" min="-0.4" max="0.4" step="0.02" value="0"></label>
+      </div>
+      <div class="row">
+        <button id="flipBtn" type="button">Flip</button>
+        <button id="swapBtn" type="button">Swap with next</button>
+        <label class="check"><input id="grainToggle" type="checkbox" checked> Grain</label>
+        <label class="check"><input id="vignetteToggle" type="checkbox" checked> Vignette</label>
+      </div>
+    </div>
+
+    <div class="step">
+      <h2>3 · Export PNG</h2>
+      <p class="step-note">Clean photographic posters — no posterize, no halftone, no ink. One click per size.</p>
+      <div id="exportRow" class="export-row"></div>
+    </div>
   </section>
 </main>
 
-<!-- Screenshot scenes (hidden unless ?shot= is set) -->
-<canvas id="shotCanvas" style="display:none"></canvas>
-<div id="layoutsGrid" class="layouts-grid" style="display:none"></div>
-
-<script type="module" src="src/shots.js"></script>
+<canvas id="shotCanvas" class="shot-canvas"></canvas>
+<script type="module" src="src/main.js"></script>
 </body>
 </html>

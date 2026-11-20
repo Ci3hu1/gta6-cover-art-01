@@ -1,9 +1,8 @@
-// main.ts — Palm Heat Cover Studio entry program (Node 22, stdlib only).
-// Hands the app in: copies app/ and screenshots/ from beside this file to
-// /output and writes /output/dossier.json with the vendored make.fun
-// library (vendor/makefun-app.ts, the kit's copy, unchanged).
-// Serve it locally with `node serve.ts`, then open http://localhost:8080.
-// Outside the grader, MAKEFUN_OUTPUT_DIR stands in for /output:
+// Leonida Nights Cover Studio v3 — entry program (Node 22, stdlib only).
+// Hands the app in: copies app/ and screenshots/ beside this file to /output
+// and writes /output/dossier.json with the vendored make.fun library, exactly
+// as the kit's starter does. Outside the grader, MAKEFUN_OUTPUT_DIR stands
+// in for /output:
 //   mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
 
 import { cpSync, existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -21,10 +20,8 @@ if (existsSync(join(here, 'screenshots'))) {
   cpSync(join(here, 'screenshots'), join(out, 'screenshots'), { recursive: true });
 }
 
-// The scorer's own caps (reference/gate.json): only text_max_bytes shapes
-// the bytes; the others refuse an entry the scorer would refuse (more than
-// 4 screenshots or one over 256 KiB; more than 993 files in app/ or 48 MiB
-// of app files, in all, or a path under app/ over 1000 bytes).
+// The gate's caps (reference/gate.json): dossier text at most 160 KiB, at
+// most 4 screenshots of at most 256 KiB, app/ at most 993 files / 48 MiB.
 writeFileSync(
   join(out, 'dossier.json'),
   buildDossier(out, {
@@ -35,4 +32,4 @@ writeFileSync(
     app_path_max_bytes: 1000,
   }),
 );
-console.log('Palm Heat Cover Studio handed in to ' + out);
+console.log('Leonida Nights v3 handed in to', out);

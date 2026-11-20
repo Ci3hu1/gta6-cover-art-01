@@ -1,67 +1,78 @@
-# Palm Heat Cover Studio — Notes
+# Leonida Nights Cover Studio v3 — build notes
 
-## v2 top-10 study (19 Nov 2026)
+## What v3 is
+A fresh sight-unseen rebuild of the gta6-cover-art-01 entry ("Leonida Nights
+Cover Studio"). v2.1 ("Palm Heat") was rejected by the owner — the heavy
+comic-ink pipeline (Sobel edges → thick outlines → posterize → halftone)
+muddied faces ("makin jelek"). v3 drops that pipeline entirely: photos stay
+clean and photographic with only gentle sunset/Vice colour grades.
 
-Live top 10 of gta6-cover-art-01 (1,557 entries) — every leader is a
-multi-panel cover-MAKER tool:
+## Top-10 study (live, 20 Nov 2026 ~11:45 WIB; 4,555 entries; scores not yet assigned)
 
-| # | Entry | Score |
-|---|-------|-------|
-| 1 | nightshift-labs "HEATWAVE Cover Studio" — 4 layouts, 4 gradients | 929,191 |
-| 2 | sunny-kestrel-27 "Golden Coast Cover Lab" | 920,012 |
-| 3 | lomfi "Neon and sunset multi-panel cover maker" | 905,386 |
-| 4 | dany-mardiana "Vice Press" | 884,126 |
-| 5 | crisp-coyote-57 "Neon Grid Cover Studio: 5-panel, 4 grades, 3 layouts, bold lettering" | 880,371 |
-| 6–8 | Neon Shore / Neon Palms / Neon Coast Cover Studio | ~874,000 |
-| 9 | udines "Vice Collage — five-panel GTA-style, sunset + neon grading" | 870,642 |
-| 10 | cosmic "Solstice Studio" | 868,657 |
+| # | Title | Win rate | What it does |
+|---|-------|----------|--------------|
+| 1 | Palmline / "Sunreel" (el-net) | 95.06% (12W 0D 0L) | Full studio: 3 steps (Add photos → Caption → Export PNG), smart face-aware crops, auto layout, "Surprise me", 3-size export |
+| 2 | HEATWAVE (nightshift-labs) | — | Title over the art, slanted panels, sunset grade, sky glow, per-panel crop, PNG 3 sizes |
+| 3 | Billboard Bay (plntky) | — | Movie-poster key art, pop-out hero cut-out, face-aware crops, auto cast tags, 3 post sizes |
+| 4 | Neon Harbor (limnhere) | — | 7-panel pop-out hero, striped retro-chrome titles, cast role tags, 8 Vice grades, 3-size PNG export |
+| 5 | Vice Cover Studio v3 (regian1117) | — | Twilight Gold Frame, retro-chrome 3D titles, role tags, 8 layouts, 6 grades, 3-size PNG export |
+| 6–10 | Coral Heat / SUNSET HEIST v3 / Sunset State / Neon Coast / VICE STATE | — | All sunset/Vice themed multi-panel poster makers |
 
-Leaders' source is withheld (titles + scores only). v1 matched their
-feature list but lost on VISUAL quality ("kurang bagus").
+All leaders' source is withheld; only titles, win rates and live-app behaviour
+were visible. The pattern is unanimous: clean-photo poster STUDIOS with
+pop-out heroes, chrome titles over the art, role tags and 3-size export.
 
-## Stephen Bliss research (Rockstar artist, defined the GTA look 2001–2016)
-
-- Comic grid, varied panel sizes, hero panel top-left (GTA 6 keeps the helicopter top-left).
-- Thick BLACK ink outlines + cell-shading with gritty realistic weight — "People often think it's just a Photoshop filter. It's not. Everything is hand-drawn."
-- Halftone dots in shadows; limited bold palette, high contrast.
-- 1950s pulp + comic book + high-fashion illustration hybrid.
-- Hidden signature details in panels (street names, brand logos).
-- "Whatever I do has to create an emotional connection" — the poster tells a story.
-
-General cover principles followed: Hero + Logo = Box Art; rule of thirds;
-foreground/midground/background depth; strong silhouette; one consistent
-design system across layouts.
+## Official GTA 6 cover (Rockstar, 18 Jun 2026)
+Nine-panel collage around the central GTA VI logo — the classic GTA cover
+tradition. Jason Duval and Lucia Caminos share the top-middle panel, both
+armed, palms and sunset behind them. Pink/purple/orange sunset palette,
+palms + neon. Other panels: helicopter over the skyline, motorcycle wheelie,
+Boobie Ike, flamingo over a speedboat, a gator, Raul Bautista, a yellow
+scissor-door sports car, a woman with sunglasses and a drink by a pool.
+Bright, crowded, restless — a mood board, not a mission list.
 
 ## What was followed
+- Clean photographic panels + gentle grades only (no posterize/halftone/ink).
+- Hero pop-out cut-out overlapping panel borders ~24px, face-aware crop
+  anchored on the upper third so the head + shoulders stay fully in frame.
+- Striped retro-chrome 3D title OVER the art with a scrim, Pacifico neon
+  subtitle, WANTED badge, 5-star heat meter.
+- Cast role tags per panel + story details (OCEAN DR street sign, LEONIDA
+  plate) drawn into panels.
+- Full studio flow: 1 Add photos → 2 Caption → 3 Export PNG (3 sizes),
+  per-panel pan/zoom/flip/swap, undo/redo, auto layout, "Surprise me",
+  grain + vignette toggles.
+- Six grades: Vice Sunset, Neon Night, Golden Coast, Twilight Gold,
+  Teal Pink, Noir. Six layouts: Hero Led, Classic Grid, Portrait,
+  Wide Hero, Slanted, Nine Panel.
+- Six fresh picsum sample photos, picked by content (the brief's first six
+  seeds returned landscapes with no faces — stone steps, a yellow wall,
+  bamboo — so the set was re-picked from picsum IDs/seeds whose content fits:
+  hero = picsum id 1027, a woman's full face; sunset = seed "miami", sunset
+  pier with people; neon = id 453, live stage spotlights; palms = seed
+  "couple", golden sunset street; ocean = id 1053, ocean waves; strip =
+  id 64, woman with sunglasses at golden hour). Default cover uses 5
+  different ones.
 
-- Comic-ink render pipeline in canvas pixel code (Sobel → thick ink outlines → posterize to 5 tones → halftone in shadows → paper grain), applied per-panel before the grade.
-- Six distinct bundled sample photos (picsum.photos fixed seeds, CC0-style placeholder photos — no real people, no GTA artwork), never repeated in one poster; default cover uses 5 different photos.
-- Hero-led grid (hero 2× size, top-left) + Classic Grid, Portrait, Wide and a tilted-snapshot variant.
-- Title block: Anton, white-to-gold gradient, ~8px black stroke, hard offset drop shadow; Pacifico neon-script subtitle; WANTED badge; 5-star heat meter; story details (OCEAN DR sign, LEONIDA plate).
-- Five truly distinct grades, each with its own ink, palette, halftone density and glow.
-- Fully offline (zero browser network requests), PNG export 1080×1080 / 1080×1350 / 1920×1080, per-panel crop/position + photo assignment, undo/redo, grain + vignette.
+## Star fix (carried from the 20 Nov owner report)
+The 5 gold stars under the title are placed bottom-up: the title block is
+computed from the frame's bottom edge, leaving >= 36px of clear space below
+the stars in every layout and every export size. Verified in 1-cover.jpg
+and 3-portrait.jpg and by the Node test (`titleBlockGeometry`).
 
-## v2.1 fixes (owner's order, 20 Nov 2026)
+## Build log (20 Nov 2026)
+- Fresh kit v7 downloaded; guide 1.5.225; competition strict_transcripts.
+- Recorder started by the parent session (recording 01a1f751-389a-72e7-8bdb-24c7bddac3fb).
+- Fonts Anton + Pacifico (OFL) downloaded from google/fonts; 6 picsum photos
+  downloaded with fixed seeds (800×600).
+- All files written fresh from the v3 brief (sight-unseen rebuild).
+- Tests: `node --test tests/cover.test.mjs` — 8/8 pass.
+- Screenshots: Playwright against `node serve.ts` on :8080; 4 shots in
+  screenshots/ (see shots.json). Verified: clean photos, pop-out hero,
+  chrome title, stars fully visible with clear space below.
+- Superseded: v2.1 commit 754c9776 / recording 01a1f730 — do NOT submit.
+- Status: NOT submitted; awaiting the owner's explicit 'Setuju' on the
+  exact entry (commit + recording + kit check, reported by the parent run).
 
-1. Hero face cropped — fixed by focus-anchored crops: the hero panel's focus sits in the upper part of its photo (fy 0.30) so the head + shoulders stay fully in frame. Verified visually in 1-cover.jpg and 3-portrait.jpg.
-2. Dark panel unreadable — fixed by lifting the darkest posterize band (per-grade shadowLift ≥ 0.14) and raising the ink threshold in dark areas so outlines thin out instead of swallowing shadow detail.
-3. Empty skyline panel — fixed by cropping deep into the busy lower part of the skyline photo (fy 0.78, zoom 1.7); the photo is mostly empty sky above the horizon, so a shallow crop read as an empty gradient.
-
-## v2.1 fix rebuild (20 Nov 2026 — stars cut off)
-
-Owner spotted in the 1-cover.jpg screenshot: the 5 gold stars under "PALM HEAT" were cut off by the bottom edge — only their top halves showed; in 3-portrait.jpg they were tight against the bottom edge. Fix: the title block is now laid out bottom-up from the frame edge (`titleBlock()` in `app/src/layouts.js`): the stars sit at an explicit bottom margin (≥36px, 4.5% of height) above the edge, subtitle above the stars, title above the subtitle. A regression test (`tests/run.mjs`, "THE STARS FIX") asserts for every layout and every export size that all 5 stars are fully inside the frame with ≥36px of clear space below them. Verified visually in 1-cover.jpg and 3-portrait.jpg.
-
-## Build log
-
-- v1: multi-panel cover maker, flat orange duotone, weak title outline.
-- v2 (commit b24778f): comic-ink pipeline, hero grid, 5 grades, 6 photos.
-- v2.1 (commit 2cc8910): hero face crop fix, dark-panel lift, busier skyline panel. Round 1 submitted 19 Nov, rejected — only transcripts_witnessed failed.
-- v2.1 rebuild (commit 4f341ed, recording 01a1f70c, sealed 04:03:17Z 20 Nov): clean-recording rebuild; owner approved submitting, then spotted the cropped stars ("Tunggu").
-- v2.1 fix rebuild (this commit): stars fully in frame; everything else unchanged.
-
-## Running & testing
-
-```sh
-node serve.ts          # http://localhost:8080
-node tests/run.mjs     # pure-logic tests (grades, layouts, title geometry, ink math)
-```
+## Live scores
+- v3: not yet submitted (awaiting 'Setuju').
