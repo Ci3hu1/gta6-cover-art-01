@@ -1,19 +1,19 @@
-// serve.ts — a minimal static server for app/ (Node 22, standard library
-// only). `node serve.ts` serves app/ on http://localhost:8080 so the cover
-// maker can be tried in a desktop browser. Serves only files inside app/
-// and only the MIME types an offline web app needs.
-
+// serve.ts — tiny static server for app/ (Node 22, standard library only).
+// `node serve.ts` serves app/ on http://localhost:8080. Development
+// convenience only: it refuses any path outside app/ and sets the MIME
+// types an offline web app needs.
 import { createReadStream, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(fileURLToPath(new URL('./app', import.meta.url)));
-const portArg = process.argv.indexOf('--port');
-const wanted = portArg === -1 ? 8080 : Number(process.argv[portArg + 1]);
-const port = Number.isInteger(wanted) && wanted > 0 && wanted < 65536 ? wanted : 8080;
+const args = process.argv.slice(2);
+const portIndex = args.indexOf('--port');
+const requested = portIndex === -1 ? 8080 : Number(args[portIndex + 1]);
+const port = Number.isInteger(requested) && requested > 0 && requested < 65536 ? requested : 8080;
 
-const MIME = {
+const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
   '.mjs': 'text/javascript; charset=utf-8',
@@ -33,35 +33,36 @@ const MIME = {
   '.txt': 'text/plain; charset=utf-8',
 };
 
-createServer((req, res) => {
-  let path;
+createServer((request, response) => {
+  const url = new URL(request.url ?? '/', 'http://localhost');
+  let pathname: string;
   try {
-    path = decodeURIComponent(new URL(req.url ?? '/', 'http://localhost').pathname);
+    pathname = decodeURIComponent(url.pathname);
   } catch {
-    res.writeHead(400).end('bad request');
+    response.writeHead(400).end('bad request');
     return;
   }
-  if (path.endsWith('/')) path += 'index.html';
-  const file = resolve(join(root, normalize(path)));
+  if (pathname.endsWith('/')) pathname += 'index.html';
+  const file = resolve(join(root, normalize(pathname)));
   if (file !== root && !file.startsWith(root + sep)) {
-    res.writeHead(403).end('forbidden');
+    response.writeHead(403).end('forbidden');
     return;
   }
-  let size;
+  let size: number;
   try {
-    const st = statSync(file);
-    if (!st.isFile()) throw new Error('not a file');
-    size = st.size;
+    const stats = statSync(file);
+    if (!stats.isFile()) throw new Error('not a file');
+    size = stats.size;
   } catch {
-    res.writeHead(404).end('not found');
+    response.writeHead(404).end('not found');
     return;
   }
-  res.writeHead(200, {
+  response.writeHead(200, {
     'content-type': MIME[extname(file).toLowerCase()] ?? 'application/octet-stream',
     'content-length': size,
     'cache-control': 'no-store',
   });
-  createReadStream(file).pipe(res);
+  createReadStream(file).pipe(response);
 }).listen(port, '127.0.0.1', () => {
-  console.log(`Palm Heat Cover Studio is on http://localhost:${port}`);
+  console.log(`app/ is on http://localhost:${port}`);
 });

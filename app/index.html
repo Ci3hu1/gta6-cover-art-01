@@ -3,69 +3,59 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Palm Heat Cover Studio — GTA 6-style cover art maker</title>
+<title>Palm Heat Cover Studio — GTA 6-style cover maker</title>
 <link rel="icon" href="data:,">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header class="topbar">
   <h1>PALM HEAT <span>Cover Studio</span></h1>
-  <p class="tagline">Turn any photo + caption into GTA 6-style cover art. Offline, in your browser.</p>
+  <p class="tagline">Turn any photo into GTA 6-style cover art — offline, in your browser.</p>
 </header>
 
-<main class="editor">
-  <section class="controls" aria-label="Cover controls">
-    <label>Caption
-      <input id="captionInput" type="text" maxlength="24" value="PALM HEAT" autocomplete="off">
-    </label>
-    <label>Subtitle
-      <input id="subtitleInput" type="text" maxlength="40" value="Vice City nights" autocomplete="off">
-    </label>
-    <label>Layout
-      <select id="layoutSelect"></select>
-    </label>
-    <label>Grade
-      <select id="gradeSelect"></select>
-    </label>
-    <label>Export size
-      <select id="sizeSelect"></select>
-    </label>
-    <label>Ink width
-      <input id="inkRange" type="range" min="1" max="3" step="1" value="2">
-    </label>
-    <label>Paper grain
-      <input id="grainRange" type="range" min="0" max="14" step="1" value="8">
-    </label>
-
-    <div class="panel-pickers" id="panelPickers" aria-label="Photo per panel"></div>
-
-    <div class="buttons">
-      <button id="undoBtn" type="button">Undo</button>
-      <button id="redoBtn" type="button">Redo</button>
-      <button id="shuffleBtn" type="button">Shuffle photos</button>
-      <button id="randomGradeBtn" type="button">Random grade</button>
-      <button id="exportBtn" type="button" class="primary">Export PNG</button>
+<main id="editor" class="editor">
+  <section class="controls">
+    <div class="control-row">
+      <label>Caption
+        <input id="captionInput" type="text" value="PALM HEAT" maxlength="24">
+      </label>
+      <label>Subtitle
+        <input id="subtitleInput" type="text" value="Vice City Nights" maxlength="40">
+      </label>
     </div>
-
-    <p class="hint">Five different photos, one per panel. Drag nothing — pick a
-    photo per panel, set the caption, export. The comic-ink pipeline
-    (Sobel outlines, 5-tone posterize, halftone shadows, grain) runs
-    before the grade, so every panel reads as hand-inked poster art.</p>
+    <div class="control-row">
+      <label>Grade
+        <select id="gradeSelect"></select>
+      </label>
+      <label>Layout
+        <select id="layoutSelect"></select>
+      </label>
+      <label>Export size
+        <select id="sizeSelect"></select>
+      </label>
+    </div>
+    <div class="control-row buttons">
+      <button id="undoBtn" type="button">↩ Undo</button>
+      <button id="redoBtn" type="button">↪ Redo</button>
+      <button id="exportBtn" type="button" class="primary">⬇ Export PNG</button>
+      <label class="upload">＋ Add your photo
+        <input id="uploadInput" type="file" accept="image/*" hidden>
+      </label>
+    </div>
+    <p class="hint">Pick a panel below to change its photo, focus and zoom. Everything stays on your machine — no uploads, no network.</p>
+    <div id="panels" class="panels"></div>
   </section>
 
-  <section class="preview" aria-label="Cover preview">
-    <canvas id="coverCanvas" width="960" height="540"></canvas>
-    <p class="hint">Preview — the export renders at full size (1080 x 1080,
-    1080 x 1350 or 1920 x 1080).</p>
+  <section class="stage">
+    <canvas id="preview" width="640" height="640" aria-label="Cover preview"></canvas>
+    <p id="sizeLabel" class="size-label"></p>
   </section>
 </main>
 
-<footer class="foot">
-  <p>Palm Heat Cover Studio — an offline cover maker. Anton &amp; Pacifico
-  fonts under the SIL Open Font License (see app/fonts/OFL.txt). No Rockstar
-  Games logo, artwork or fonts. Photos are bundled samples, free to use.</p>
-</footer>
+<!-- Screenshot scenes (hidden unless ?shot= is set) -->
+<canvas id="shotCanvas" style="display:none"></canvas>
+<div id="layoutsGrid" class="layouts-grid" style="display:none"></div>
 
-<script type="module" src="src/main.js"></script>
+<script type="module" src="src/shots.js"></script>
 </body>
 </html>
