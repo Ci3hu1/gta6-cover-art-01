@@ -113,7 +113,7 @@ export function furnitureGeometry(W, H) {
     seal: { x: geo.sealCx - geo.sealR, y: geo.sealCy - geo.sealR, w: geo.sealR * 2, h: geo.sealR * 2 },
     ribbon: { x: W * 0.19, y: geo.ribbonY, w: W * 0.62, h: geo.ribbonH },
     billing: { x: fi + 8, y: geo.billingY, w: W * 0.62, h: 0.028 * H },
-    barcode: { x: W - fi - 0.115 * W, y: geo.billingY - 0.004 * H, w: 0.1 * W, h: 0.032 * H },
+    barcode: (() => { const bl = barcodeLayout(W, H); return { x: bl.x, y: bl.y, w: bl.w, h: bl.h }; })(),
     wanted: { x: fi + 6, y: geo.starsCy - geo.wantedH / 2, w: geo.wantedW, h: geo.wantedH },
     stars: { x: W / 2 - 0.15 * W, y: geo.starsCy - geo.starR, w: 0.3 * W, h: geo.starR * 2 },
   };
@@ -145,6 +145,26 @@ export function barcodeBars(seed, count = 42) {
     bars.push({ black: r > 0.42, w: r < 0.6 ? 1 : r < 0.85 ? 2 : 3 });
   }
   return bars;
+}
+
+// Barcode layout: the bars live in a reserved box at the bottom-right —
+// 0.10*W wide, its right edge 0.015*W inside the frame's inner edge (that
+// gap is the barcode's right quiet zone). The bar unit is scaled so the
+// 42 bars exactly fill the box, so the drawn width never depends on the
+// seed: the barcode can never run past the frame in any size or title.
+// (A fixed integer unit overflowed the box: ~252px drawn vs 128px reserved
+// at 1280w, clipping the bars at the image edge.)
+export function barcodeLayout(W, H, seed = 'LEONIDA NIGHTSVOL. 04') {
+  const geo = titleGeometry(W, H);
+  const fi = geo.frameInset;
+  const x = W - fi - 0.115 * W;
+  const y = geo.billingY - 0.004 * H;
+  const w = 0.1 * W;
+  const h = 0.032 * H;
+  const bars = barcodeBars(seed);
+  const totalUnits = bars.reduce((n, b) => n + b.w + 1, 0);
+  const unit = w / totalUnits;
+  return { x, y, w, h, unit, totalUnits, right: x + w, frameInnerRight: W - fi };
 }
 
 // Map layout panels to photos (cycle the samples), applying overrides.
@@ -620,11 +640,11 @@ export function renderPoster(canvas, state, W, H) {
   ctx.fillText('A LEONIDA NIGHTS PICTURE  ·  STARRING THE DRIVER · THE BOSS · THE RIDER · THE FIXER · THE INSIDER', fi + 8, geo.billingY);
   ctx.fillText('SHOT ON YOUR OWN CAMERA  ·  GRADED BY HAND  ·  LEONIDA NIGHTS © 2026', fi + 8, geo.billingY + 0.017 * H);
   const bars = barcodeBars(state.title + state.volume);
-  const barX0 = W - fi - 0.115 * W;
-  const barY = geo.billingY - 0.004 * H;
-  const barH = 0.032 * H;
-  let bx = barX0;
-  const unit = Math.max(1, Math.round(0.0016 * W));
+  const bl = barcodeLayout(W, H, state.title + state.volume);
+  const barY = bl.y;
+  const barH = bl.h;
+  let bx = bl.x;
+  const unit = bl.unit;
   for (const b of bars) {
     if (b.black) {
       ctx.fillStyle = frame.id === 'cream' ? '#241536' : '#f5e9c8';

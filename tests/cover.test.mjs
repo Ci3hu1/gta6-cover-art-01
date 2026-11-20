@@ -7,7 +7,7 @@ import { GRADES, DEFAULT_GRADE_ID, gradeById } from '../app/src/grades.js';
 import { LAYOUTS, DEFAULT_LAYOUT_ID, layoutById, layoutPixelRects, heroFaceBox } from '../app/src/layouts.js';
 import {
   SAMPLES, defaultState, titleGeometry, starsInFrame, titleClearsFace,
-  furnitureGeometry, faceAwareCrop, barcodeBars, resolvePanels,
+  furnitureGeometry, faceAwareCrop, barcodeBars, barcodeLayout, resolvePanels,
 } from '../app/src/cover.js';
 
 const SIZES = [
@@ -115,6 +115,34 @@ test('barcode bars are deterministic per seed', () => {
   assert.deepEqual(a, b);
   assert.notDeepEqual(a, c);
   assert.equal(a.length, 42);
+});
+
+test('barcode right edge stays inside the frame with clear space, all sizes and titles', () => {
+  // The drawn bars must end at the reserved box's right edge, which sits
+  // 0.015*W inside the frame's inner edge — never at/ past the image edge.
+  const seeds = ['LEONIDA NIGHTSVOL. 04', 'NEON DRIVEVOL. 04', 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVOL. 04'];
+  for (const s of SIZES) {
+    const geo = titleGeometry(s.w, s.h);
+    for (const seed of seeds) {
+      const bl = barcodeLayout(s.w, s.h, seed);
+      // Right edge: inside the frame inner edge with >= 1% of W clear space.
+      assert.ok(
+        bl.right <= s.w - geo.frameInset - 0.01 * s.w,
+        `${s.w}x${s.h} ${seed.slice(0, 12)}: barcode right ${bl.right.toFixed(1)} vs frame inner ${s.w - geo.frameInset}`,
+      );
+      // Bars exactly fill the reserved box (no overrun, no shortfall).
+      assert.ok(Math.abs(bl.x + bl.totalUnits * bl.unit - bl.right) < 0.01, 'bars fill box exactly');
+      // Bars stay legible: unit never below half a pixel at any size.
+      assert.ok(bl.unit >= 0.5, `${s.w}x${s.h}: barcode unit ${bl.unit.toFixed(2)} too thin`);
+    }
+    // furnitureGeometry's barcode rect is the same box.
+    const f = furnitureGeometry(s.w, s.h);
+    const bl = barcodeLayout(s.w, s.h);
+    assert.deepEqual(
+      { x: f.barcode.x, y: f.barcode.y, w: f.barcode.w, h: f.barcode.h },
+      { x: bl.x, y: bl.y, w: bl.w, h: bl.h },
+    );
+  }
 });
 
 test('default cover uses 5 different people photos', () => {
