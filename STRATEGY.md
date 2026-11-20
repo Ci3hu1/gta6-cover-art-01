@@ -1,55 +1,45 @@
-# Strategy — Palm Heat Cover Studio v2.1
+# Strategy — how Palm Heat Cover Studio wins
 
-## The bet
+## The edge: the render, not the feature list
 
-The judge compares screenshots two at a time and picks the better cover
-art app. The live top 10 are all multi-panel cover makers with several
-grades and layouts — so the entry must match that feature list AND win on
-the one thing a title cannot show: the art itself must look inked, not
-filtered.
+The top 10 are all cover-maker tools with the same checklist (multi-panel,
+grades, layouts, bold lettering). v1 matched the checklist and lost on
+visual quality. The judge's first criterion is the art in the
+screenshots, so v2 spends its effort there: a real comic-ink pipeline
+(Sobel outlines, 5-tone posterize, halftone shadows, grain) run before
+the grade, so the poster looks hand-inked in the Stephen Bliss manner
+instead of filtered. A filter app and an inked app are easy to tell apart
+in a contact sheet — that is the gap this entry plays.
 
-## How it wins
+## The grid: hero-led, five different photos
 
-1. **The ink pipeline is the edge.** Every panel goes through real pixel
-   code — Sobel edges dilated into thick black outlines, 5-tone
-   posterize, Bayer halftone in the shadows, paper grain — before the
-   grade palette is applied. At contact-sheet size the posters read as
-   hand-inked comic art, which is exactly the GTA look (Stephen Bliss:
-   thick black ink, halftone shadows, limited bold palette) and exactly
-   what a flat duotone filter cannot fake.
-2. **Hero-led hierarchy.** The hero panel is 2×, top-left, with the face
-   fully in frame; supporting panels vary in size; the eye travels
-   diagonally. Five layouts keep one design system (same frames, same
-   title block, same badge) so every export looks like the same studio.
-3. **Five grades that re-ink, not tint.** Each grade is its own 5-step
-   palette + ink colour + halftone density, so Neon Night and Noir Ink
-   are genuinely different posters from the same photos.
-4. **Story details sell the fiction.** "OCEAN DR", the "LEONIDA" plate,
-   the WANTED badge and the 5-star heat meter are the hidden-signature
-   details Bliss puts in panels — small, but they make the poster tell a
-   story instead of decorating a photo.
-5. **Fast and easy is a scored criterion.** Six bundled photos, one-click
-   presets (Palm Heat / Neon Drive / Night Shift), per-panel focal
-   sliders, undo/redo, one-click PNG export in all three post sizes —
-   photo to shareable PNG in under a minute, offline.
+One photo per panel, never repeated, with the hero 2x top-left and
+supporting panels in varied sizes for diagonal flow. Focal-point crops
+keep faces whole (the v2.1 hero-face fix) and keep every panel busy
+(the skyline fix). Five distinct grades change ink, palette, halftone
+and glow together, so switching grade re-inks the whole poster rather
+than re-tinting it.
 
-## Tried and dropped
+## The title: the box-art half
 
-- Flat duotone grade (v1): looked like a filter; the user said
-  "kurang bagus". Replaced by the ink pipeline.
-- Repeating the same 2 photos across panels (v1): reads as a template.
-  Six photos, one per panel.
-- Title over the bottom row at 0.135×H: clipped the star row and buried
-  the bottom panels. Shrunk to 0.115×H, stars clear the frame.
+Anton with a white-to-gold gradient, an ~8px black stroke and a hard
+offset shadow is the poster's second anchor after the hero panel. The
+Pacifico neon subtitle, WANTED badge and five-star heat meter, plus the
+"OCEAN DR" sign and "LEONIDA" plate drawn into the panels, give the
+poster the story details Bliss hides in his covers — the judge sees a
+poster that tells a story, not a template with a caption stamped on.
 
-## Expected outcomes
+## What was tried and dropped
 
-- Gate: app/ within caps, 4 screenshots ≤ 256 KiB, dossier ≤ 1.5 MiB —
-  verified locally (dossier 1,057,451 bytes).
-- Judge: wins on art (inked panels + strong outlined title), any photo
-  (6 samples + upload, per-panel crop), fast/easy (presets, 3 export
-  sizes), polish (offline, undo/redo, grain + vignette).
-- Risk: the picsum photos are random Unsplash images, not Vice City
-  scenes — the ink + grade system is what makes them read as one poster.
-  The skyline photo is the weakest (pale sky); its zoomed horizon crop
-  is the mitigation.
+- Flat duotone grade over the raw photo (v1): reads as a filter, no ink.
+- Uniform panel grid (v1): no hierarchy, no hero.
+- Same two photos repeated across panels (v1): the poster looks empty
+  even when the grid is full.
+
+## Expected outcome
+
+A valid dossier with a cover screenshot that shows, at a glance, five
+inked panels, five different scenes, a strong outlined title and a neon
+grade — the four things the judge's rubric lists first. The entry is
+built to beat the mid-ladder house apps (Panel Press and above) on the
+art criterion while matching the leaders' feature checklist.

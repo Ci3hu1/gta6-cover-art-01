@@ -1,110 +1,132 @@
-// Palm Heat Cover Studio — shots.js
-// Fixed scenes for screenshots, driven by ?shot= in the URL.
-//   ?shot=cover&layout=wide&caption=PALM%20HEAT   — the exported cover alone
-//   ?shot=editor&photo=boulevard&caption=...       — the editor with a photo
-//   ?shot=layouts&caption=NEON%20DRIVE             — all four layouts at once
-// window.__shotReady is set once the scene has painted.
+// shots.js — the ?shot= scene driver for screenshots.
+// The app renders each screenshot scene itself (the house kit's render.mjs
+// pattern): ?shot=cover draws the exported cover full-frame, ?shot=editor
+// shows the editor with a photo loaded, ?shot=portrait draws the tall
+// cover, ?shot=layouts draws a four-layout overview. When a scene is done
+// it sets window.__shotReady = true so the screenshot script knows the
+// ink pipeline has finished drawing.
 
-import { defaultPanels, defaultState, sampleById } from './main.js';
-import { layoutById } from './layouts.js';
+import { gradeById } from './grades.js';
+import { LAYOUT_IDS, LAYOUT_NAMES } from './layouts.js';
+import { SAMPLE_PHOTOS, DEFAULT_COVER, renderCover } from './cover.js';
+import { Editor, EXPORT_SIZES, sizeById, loadImage, buildControls } from './main.js';
 
-function ready() {
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    window.__shotReady = true;
-  }));
-}
-
-function fitCanvas(canvas, w, h) {
-  canvas.width = w;
-  canvas.height = h;
-  canvas.style.width = '100vw';
-  canvas.style.height = '100vh';
-  canvas.style.display = 'block';
-}
-
-async function runCover(query, api) {
-  const layoutId = query.get('layout') ?? 'wide';
-  const caption = query.get('caption') ?? 'PALM HEAT';
-  const layout = layoutById(layoutId);
-  const canvas = document.getElementById('cover');
-  const w = Math.min(window.innerWidth, 1280);
-  const h = Math.round((w * layout.h) / layout.w);
-  fitCanvas(canvas, w, h);
-  const panels = defaultPanels();
-  // The cover shot uses five DIFFERENT photos, one per panel.
-  api.state = {
-    ...defaultState(),
-    caption,
-    subtitle: 'Leonida • Vice City',
-    grade: query.get('grade') ?? 'vice-sunset',
-    layout: layoutId,
-    panels,
+function stateFromParams(params) {
+  return {
+    layout: params.get('layout') || DEFAULT_COVER.layout,
+    grade: params.get('grade') || DEFAULT_COVER.grade,
+    caption: params.get('caption') || DEFAULT_COVER.caption,
+    subtitle: params.get('subtitle') || DEFAULT_COVER.subtitle,
+    photos: (params.get('photos') || DEFAULT_COVER.photos.join(',')).split(','),
+    size: params.get('size') || '1920x1080',
+    inkWidth: Number(params.get('ink') || 2),
+    grain: Number(params.get('grain') || 8),
   };
-  await api.renderInto(canvas);
-  ready();
 }
 
-async function runEditor(query, api) {
-  const photo = query.get('photo') ?? 'boulevard';
-  const caption = query.get('caption') ?? 'PALM HEAT';
-  const s = sampleById(photo);
-  api.state = {
-    ...defaultState(),
-    caption,
-    panels: defaultPanels().map((p, i) =>
-      i === 0 ? { photo, fx: s.fx, fy: s.fy, zoom: s.zoom ?? 1, lift: s.lift } : p),
-  };
-  // The editor chrome is built by main.js; here we only paint the cover.
-  const canvas = document.getElementById('cover');
-  canvas.width = 640;
-  canvas.height = 640;
-  await api.renderInto(canvas);
-  ready();
-}
-
-async function runLayouts(query, api) {
-  const caption = query.get('caption') ?? 'NEON DRIVE';
-  const canvas = document.getElementById('cover');
-  const W = window.innerWidth;
-  const H = window.innerHeight;
-  fitCanvas(canvas, W, H);
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#14101a';
-  ctx.fillRect(0, 0, W, H);
-  const ids = ['hero', 'classic', 'portrait', 'wide'];
-  const labels = ['Hero-led', 'Classic Grid', 'Portrait', 'Wide'];
-  const cellW = Math.floor((W - 60) / 2);
-  const cellH = Math.floor((H - 90) / 2);
-  for (let i = 0; i < 4; i++) {
-    const cx = 20 + (i % 2) * (cellW + 20);
-    const cy = 20 + Math.floor(i / 2) * (cellH + 25);
-    const layout = layoutById(ids[i]);
-    const scale = Math.min(cellW / layout.w, (cellH - 28) / layout.h);
-    const cw = Math.round(layout.w * scale);
-    const ch = Math.round(layout.h * scale);
-    const off = document.createElement('canvas');
-    off.width = cw;
-    off.height = ch;
-    api.state = {
-      ...defaultState(),
-      caption,
-      subtitle: 'Leonida • Vice City',
-      grade: i % 2 === 0 ? 'vice-sunset' : 'neon-night',
-      layout: ids[i],
-      panels: defaultPanels(),
-    };
-    await api.renderInto(off);
-    ctx.drawImage(off, cx + (cellW - cw) / 2, cy, cw, ch);
-    ctx.fillStyle = '#f5e6c8';
-    ctx.font = '22px Anton, "Arial Black", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(labels[i], cx + cellW / 2, cy + ch + 24);
+async function loadAllPhotos() {
+  const photos = new Map();
+  await document.fonts.load('16px Anton');
+  await document.fonts.load('16px Pacifico');
+  for (const p of SAMPLE_PHOTOS) {
+    photos.set(p.id, await loadImage(p.src));
   }
-  ready();
+  return photos;
 }
 
-export async function runShot(shot, query, api) {
-  if (shot === 'cover') return runCover(query, api);
-  if (shot === 'layouts') return runLayouts(query, api);
-  return runEditor(query, api);
+function fullScreenCanvas() {
+  document.body.innerHTML = '';
+  document.body.style.margin = '0';
+  document.body.style.background = '#f5efe2';
+  const canvas = document.createElement('canvas');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+  document.body.appendChild(canvas);
+  return canvas;
 }
+
+function markReady() {
+  window.__shotReady = true;
+  document.title = `shot ready — ${new URLSearchParams(location.search).get('shot')}`;
+}
+
+async function shotCover(params) {
+  const photos = await loadAllPhotos();
+  const state = stateFromParams(params);
+  const canvas = fullScreenCanvas();
+  renderCover(canvas, photos, state, { w: canvas.width, h: canvas.height });
+  markReady();
+}
+
+async function shotEditor(params) {
+  // Normal editor page, prefilled from the query, photo already loaded.
+  const canvas = document.getElementById('coverCanvas');
+  const editor = new Editor(canvas);
+  buildControls(editor);
+  await editor.init();
+  const state = stateFromParams(params);
+  editor.set({
+    layout: state.layout,
+    grade: state.grade,
+    caption: state.caption,
+    subtitle: state.subtitle,
+    photos: state.photos,
+  });
+  // Let the preview paint, then signal ready.
+  requestAnimationFrame(() => requestAnimationFrame(markReady));
+}
+
+async function shotLayouts(params) {
+  const photos = await loadAllPhotos();
+  const state = stateFromParams(params);
+  const canvas = fullScreenCanvas();
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.fillStyle = '#f5efe2';
+  ctx.fillRect(0, 0, W, H);
+  const show = ['hero', 'classic', 'portrait', 'wide'];
+  const cw = (W - 48) / 2;
+  const ch = (H - 96) / 2;
+  for (let i = 0; i < show.length; i++) {
+    const layout = show[i];
+    const x = 16 + (i % 2) * (cw + 16);
+    const y = 16 + Math.floor(i / 2) * (ch + 48);
+    const off = document.createElement('canvas');
+    // Portrait layout keeps its tall aspect inside its cell.
+    const aspect = layout === 'portrait' ? 1080 / 1350 : 1920 / 1080;
+    let ow = cw;
+    let oh = cw / aspect;
+    if (oh > ch) {
+      oh = ch;
+      ow = ch * aspect;
+    }
+    off.width = Math.round(ow);
+    off.height = Math.round(oh);
+    const sub = { ...state, layout };
+    renderCover(off, photos, sub, { w: off.width, h: off.height });
+    ctx.drawImage(off, x + (cw - ow) / 2, y, ow, oh);
+    ctx.fillStyle = '#160a24';
+    ctx.font = `${Math.round(H * 0.028)}px Anton, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillText(LAYOUT_NAMES[layout].toUpperCase(), x + cw / 2, y + oh + Math.round(H * 0.04));
+  }
+  markReady();
+}
+
+export async function runShot(params) {
+  const shot = params.get('shot');
+  try {
+    if (shot === 'editor') await shotEditor(params);
+    else if (shot === 'layouts') await shotLayouts(params);
+    else await shotCover(params); // 'cover' and 'portrait' both render a cover
+  } catch (err) {
+    document.title = `shot failed: ${err.message}`;
+    window.__shotError = String(err && err.message ? err.message : err);
+    throw err;
+  }
+}
+
+// Re-exported for the editor's size picker (kept in one place).
+export { EXPORT_SIZES, sizeById, gradeById, LAYOUT_IDS };

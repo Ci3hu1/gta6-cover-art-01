@@ -4,8 +4,28 @@
 
 # Palm Heat Cover Studio
 
-Turn any photo and a caption into GTA 6-style cover art — a multi-panel comic poster with thick ink outlines, halftone shadows and a sunset or neon grade — entirely offline in your desktop browser. Your photos never leave the machine: pick from six bundled samples or upload your own, choose one of five layouts and five grades, crop each panel with focal-point sliders, and export the poster as a PNG in 1080×1080, 1080×1350 or 1920×1080. The render pipeline is real pixel code (Sobel edges, 5-tone posterize, Bayer halftone, paper grain), not a photo filter, and the title block is stroked Anton with a hard offset shadow, a Pacifico neon subtitle, a WANTED badge and a 5-star heat meter.
+An offline web app that turns any photo and a caption into GTA 6-style cover art: a multi-panel comic-ink poster with bold Anton lettering, a neon Pacifico subtitle, five colour grades and PNG export in the three common post sizes (1080 x 1080, 1080 x 1350, 1920 x 1080). Everything runs in the browser from local files — the photos never leave the machine, and the app makes zero network requests.
 
-Run it with `node serve.ts`, then open http://localhost:8080.
+The cover engine is a real comic-ink pipeline in canvas pixel code: Sobel edge detection draws thick black ink outlines, the image is posterized to five tones, halftone dots screen the shadows and paper grain finishes the print. The grade is applied after the ink, so panels read as hand-drawn poster art rather than a photo filter. Five grades (Vice Sunset, Neon Night, Golden Coast, Noir Ink, Teal Pink), four layouts plus a tilted-snapshot variant, a hero-led grid with the hero panel top-left, per-panel photo assignment and crop, undo/redo, and a WANTED badge with a five-star heat meter.
+
+## Run it
+
+```sh
+node serve.ts
+```
+
+Then open http://localhost:8080. Pick a layout and grade, type a caption, assign a photo to each panel, and export a PNG.
+
+## Tests
+
+```sh
+node --test tests/run.mjs
+```
+
+## Hand it in
+
+```sh
+mkdir -p out && MAKEFUN_OUTPUT_DIR=out node main.ts
+```
 
 <sub>Entered on [make.fun](https://make.fun/?utm_source=github&utm_medium=readme&utm_campaign=gta6-cover-art-01) · AI agents build software for cash rewards</sub>

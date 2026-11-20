@@ -1,108 +1,108 @@
-// Palm Heat Cover Studio — grades.js
-// Five truly distinct colour grades. Each grade is a 5-step poster palette
-// (dark -> light) plus an ink colour, a glow colour, a halftone density and a
-// shadow lift. The ink pipeline in cover.js maps every pixel's posterized
-// tone to one step of the palette, so swapping a grade re-inks the whole
-// poster instead of tinting it like a photo filter.
+// grades.js — the five colour grades for Palm Heat Cover Studio.
+// A grade sets the ink colour, the 5-tone poster palette (dark -> light),
+// the halftone dot spacing and the glow colour used for the neon subtitle.
+// Pure data + pure helpers: no browser globals, unit-tested in tests/.
 
-export const GRADES = [
-  {
-    id: 'vice-sunset',
+export const GRADES = {
+  vice: {
+    id: 'vice',
     name: 'Vice Sunset',
-    ink: '#160709',
-    // dark, deep, mid, bright, paper
-    palette: ['#2b0a1e', '#7a1e3c', '#e8533f', '#ff9e57', '#ffe9b0'],
-    glow: '#ff5e3a',
-    halftone: 1.0,
-    shadowLift: 0.0,
-    grain: 9,
+    ink: '#160a24',
+    // dark -> light, 5 poster tones
+    palette: ['#1d0b2e', '#5b1a4d', '#c93a6b', '#ff7a3c', '#ffd166'],
+    halftone: 6,
+    glow: '#ff9e57',
+    shadowFloor: 0.16,
   },
-  {
-    id: 'neon-night',
+  neon: {
+    id: 'neon',
     name: 'Neon Night',
-    ink: '#05030f',
-    palette: ['#0b0630', '#3b1d8f', '#b13df0', '#ff5ad1', '#7df9ff'],
-    glow: '#ff2fb3',
-    halftone: 1.15,
-    shadowLift: 0.06,
-    grain: 10,
+    ink: '#050514',
+    palette: ['#050514', '#1b1b4d', '#7b2ff7', '#ff2e88', '#7df9ff'],
+    halftone: 5,
+    glow: '#ff2e88',
+    shadowFloor: 0.12,
   },
-  {
-    id: 'golden-coast',
+  golden: {
+    id: 'golden',
     name: 'Golden Coast',
-    ink: '#1c1206',
-    palette: ['#3a2408', '#8a5a1d', '#e8a83c', '#ffd97a', '#fff6d8'],
-    glow: '#ffb52e',
-    halftone: 0.9,
-    shadowLift: 0.04,
-    grain: 8,
+    ink: '#201404',
+    palette: ['#201404', '#6b3d0c', '#c97b1e', '#ffb347', '#fff3c4'],
+    halftone: 7,
+    glow: '#ffcf6e',
+    shadowFloor: 0.16,
   },
-  {
-    id: 'noir-ink',
+  noir: {
+    id: 'noir',
     name: 'Noir Ink',
     ink: '#000000',
-    palette: ['#141414', '#3a3a3a', '#7d7d7d', '#c9c9c9', '#ffffff'],
+    palette: ['#000000', '#1c1c1c', '#4a4a4a', '#8a8a8a', '#f2f2f2'],
+    halftone: 4,
     glow: '#ffffff',
-    halftone: 1.3,
-    shadowLift: 0.1,
-    grain: 12,
+    shadowFloor: 0.2,
   },
-  {
-    id: 'teal-pink',
+  teal: {
+    id: 'teal',
     name: 'Teal Pink',
-    ink: '#0a0f14',
-    palette: ['#0d2b33', '#14655e', '#2fb3a3', '#ff7fa5', '#ffe3ec'],
-    glow: '#2fe8c8',
-    halftone: 1.0,
-    shadowLift: 0.05,
-    grain: 9,
+    ink: '#062a2a',
+    palette: ['#062a2a', '#0e4d4d', '#14919b', '#ff6b9d', '#ffe3ec'],
+    halftone: 6,
+    glow: '#ff6b9d',
+    shadowFloor: 0.14,
   },
-];
+};
 
+export const GRADE_IDS = Object.keys(GRADES);
+
+/** Look a grade up by id; unknown ids fall back to Vice Sunset. */
 export function gradeById(id) {
-  return GRADES.find((g) => g.id === id) ?? GRADES[0];
+  return GRADES[id] || GRADES.vice;
 }
 
-export function gradeIds() {
-  return GRADES.map((g) => g.id);
+/** Parse a #rrggbb colour into [r, g, b] (0-255). */
+export function hexRgb(hex) {
+  const h = hex.replace('#', '');
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
 }
 
-// Map a 0..255 luminance to a 0..4 poster tone. `lift` (0..0.25) raises the
-// darkest band so a dark photo still reads at a glance (v2.1 fix: the dark
-// panel). The lift is strongest in the shadows and fades toward white.
-export function posterizeTone(lum, lift = 0) {
-  const t = lift + (1 - lift) * (lum / 255);
-  if (t < 0.16) return 0;
-  if (t < 0.36) return 1;
-  if (t < 0.56) return 2;
-  if (t < 0.78) return 3;
-  return 4;
+/**
+ * Map a 0..1 luminance through a grade's 5-tone palette.
+ * Returns [r, g, b]. The palette is a gradient map: the tone is looked up
+ * continuously so band edges stay soft inside the posterized steps.
+ */
+export function gradeColor(grade, lum) {
+  const pal = grade.palette.map(hexRgb);
+  const t = Math.max(0, Math.min(1, lum)) * (pal.length - 1);
+  const i = Math.min(pal.length - 2, Math.floor(t));
+  const f = t - i;
+  const a = pal[i];
+  const b = pal[i + 1];
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * f),
+    Math.round(a[1] + (b[1] - a[1]) * f),
+    Math.round(a[2] + (b[2] - a[2]) * f),
+  ];
 }
 
-// Perceived luminance (Rec. 709 weights), 0..255.
-export function luminance(r, g, b) {
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+/** Mean luminance (0..1) of an {width, height, data} RGBA image. */
+export function meanLuminance(img) {
+  const d = img.data;
+  let sum = 0;
+  const n = img.width * img.height;
+  for (let i = 0; i < n; i++) {
+    const o = i * 4;
+    sum += 0.299 * d[o] + 0.587 * d[o + 1] + 0.114 * d[o + 2];
+  }
+  return sum / n / 255;
 }
 
-// 4x4 Bayer matrix for the halftone dot screen in shadow areas.
-export const BAYER = [
-  [0, 8, 2, 10],
-  [12, 4, 14, 6],
-  [3, 11, 1, 9],
-  [15, 7, 13, 5],
-];
-
-// Halftone decision: in the two darkest tones, punch the pixel one step
-// lighter wherever the Bayer cell is "open", which reads as printed dots.
-// `density` scales how much of the shadow turns to dots.
-export function halftoneLightens(tone, x, y, density = 1) {
-  if (tone > 1) return false;
-  const cell = BAYER[y & 3][x & 3] / 16;
-  const threshold = tone === 0 ? 0.45 * density : 0.7 * density;
-  return cell > threshold;
-}
-
-export function hexToRgb(hex) {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+/**
+ * Shadow lift for dark photos (v2.1 fix: the camera panel came out nearly
+ * black). Returns the darkest posterize band floor to use: dark photos get
+ * a higher floor so shadow detail survives the ink pass.
+ */
+export function shadowFloorFor(grade, meanLum) {
+  if (meanLum < 0.22) return Math.max(grade.shadowFloor, 0.28);
+  if (meanLum < 0.35) return Math.max(grade.shadowFloor, 0.22);
+  return grade.shadowFloor;
 }
